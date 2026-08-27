@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "title": "Setup KMP Project",
+    "isCompleted": true
+  },
+  {
+    "id": 2,
+    "title": "Implement Task Model",
+    "isCompleted": true
+  },
+  {
+    "id": 3,
+    "title": "Fix App.kt Issues",
+    "isCompleted": false
+  }
+]
