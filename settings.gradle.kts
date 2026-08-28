@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "TaskManagerKMPApp"
 include(":androidApp")
-include(":shared")
+include(":composeApp")
