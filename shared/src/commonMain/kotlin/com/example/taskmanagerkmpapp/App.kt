@@ -19,30 +19,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.taskmanagerkmpapp.model.Priority
 import com.example.taskmanagerkmpapp.model.Task
-import com.example.taskmanagerkmpapp.repository.TaskRepository
-import org.jetbrains.compose.resources.ExperimentalResourceApi
-import taskmanagerkmpapp.shared.generated.resources.Res
 
 sealed class Screen {
+    object Welcome : Screen()
     object TaskList : Screen()
     object AddTask : Screen()
 }
 
-@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun App() {
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.TaskList) }
-    val repository = remember { TaskRepository() }
-    var taskList by remember { mutableStateOf(emptyList<Task>()) }
-
-    LaunchedEffect(Unit) {
-        try {
-            val jsonBytes = Res.readBytes("files/tasks.json")
-            val jsonString = jsonBytes.decodeToString()
-            taskList = repository.parseTasks(jsonString)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+    var currentScreen by remember { mutableStateOf<Screen>(Screen.Welcome) }
+    var taskList by remember {
+        mutableStateOf(
+            listOf(
+                Task(1, "Complete Project Proposal", "Finalize the draft for the TaskManager project", false, Priority.High),
+                Task(2, "Buy Groceries", "Milk, Eggs, Bread, and Fruits", false, Priority.Medium),
+                Task(3, "Workout", "Morning cardio and strength training", false, Priority.Low)
+            )
+        )
     }
 
     MaterialTheme {
@@ -51,6 +45,9 @@ fun App() {
             color = MaterialTheme.colorScheme.background
         ) {
             when (currentScreen) {
+                is Screen.Welcome -> WelcomeScreen(
+                    onGetStarted = { currentScreen = Screen.TaskList }
+                )
                 is Screen.TaskList -> TaskListScreen(
                     tasks = taskList,
                     onAddTaskClick = { currentScreen = Screen.AddTask },
@@ -75,6 +72,42 @@ fun App() {
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun WelcomeScreen(onGetStarted: () -> Unit) {
+    val darkBlue = Color(0xFF1A237E)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Welcome to",
+            color = Color.Gray,
+            fontSize = 18.sp
+        )
+        Text(
+            text = "Task Manager",
+            color = darkBlue,
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(48.dp))
+        Button(
+            onClick = onGetStarted,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = darkBlue),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("GET STARTED", color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
