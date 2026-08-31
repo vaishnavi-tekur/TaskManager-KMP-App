@@ -5,8 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.taskmanagerkmpapp.model.Priority
 import com.example.taskmanagerkmpapp.model.Task
 import com.example.taskmanagerkmpapp.repository.TaskRepository
-import com.example.taskmanagerkmpapp.validation.TaskValidator
-import com.example.taskmanagerkmpapp.validation.ValidationResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +23,20 @@ data class TaskUiState(
     val errorMessage: String? = null
 )
 
+sealed class ValidationResult {
+    object Success : ValidationResult()
+    data class Error(val message: String) : ValidationResult()
+}
+
+object TaskValidator {
+    fun validateTask(title: String, description: String): ValidationResult {
+        if (title.isBlank()) return ValidationResult.Error("Title cannot be empty")
+        if (title.length < 3) return ValidationResult.Error("Title must be at least 3 characters")
+        if (description.isBlank()) return ValidationResult.Error("Description cannot be empty")
+        return ValidationResult.Success
+    }
+}
+
 class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(TaskUiState())
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
@@ -41,13 +53,8 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    fun navigateToAdd() {
-        _uiState.update { it.copy(currentScreen = Screen.AddTask, errorMessage = null) }
-    }
-
-    fun navigateBack() {
-        _uiState.update { it.copy(currentScreen = Screen.TaskList, errorMessage = null) }
-    }
+    fun navigateToAdd() = _uiState.update { it.copy(currentScreen = Screen.AddTask, errorMessage = null) }
+    fun navigateBack() = _uiState.update { it.copy(currentScreen = Screen.TaskList, errorMessage = null) }
 
     fun saveTask(title: String, description: String, priority: Priority) {
         val validation = TaskValidator.validateTask(title, description)
@@ -55,35 +62,12 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             _uiState.update { it.copy(errorMessage = validation.message) }
             return
         }
-
-        val newTask = Task(
-            id = (_uiState.value.tasks.maxOfOrNull { it.id } ?: 0) + 1,
-            title = title,
-            description = description,
-            isCompleted = false,
-            priority = priority
-        )
-
-        _uiState.update { 
-            it.copy(
-                tasks = it.tasks + newTask,
-                currentScreen = Screen.TaskList,
-                errorMessage = null
-            )
-        }
+        val newTask = Task((_uiState.value.tasks.maxOfOrNull { it.id } ?: 0) + 1, title, description, false, priority)
+        _uiState.update { it.copy(tasks = it.tasks + newTask, currentScreen = Screen.TaskList, errorMessage = null) }
     }
 
-    fun deleteTask(task: Task) {
-        _uiState.update { state ->
-            state.copy(tasks = state.tasks.filter { it.id != task.id })
-        }
-    }
-
-    fun toggleTask(task: Task) {
-        _uiState.update { state ->
-            state.copy(tasks = state.tasks.map {
-                if (it.id == task.id) it.copy(isCompleted = !it.isCompleted) else it
-            })
-        }
+    fun deleteTask(task: Task) = _uiState.update { state -> state.copy(tasks = state.tasks.filter { it.id != task.id }) }
+    fun toggleTask(task: Task) = _uiState.update { state ->
+        state.copy(tasks = state.tasks.map { if (it.id == task.id) it.copy(isCompleted = !it.isCompleted) else it })
     }
 }

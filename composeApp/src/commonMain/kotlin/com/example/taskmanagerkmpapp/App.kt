@@ -12,8 +12,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.taskmanagerkmpapp.repository.TaskRepository
 import com.example.taskmanagerkmpapp.ui.Screen
 import com.example.taskmanagerkmpapp.ui.TaskViewModel
-import com.example.taskmanagerkmpapp.ui.screens.AddTaskScreen
-import com.example.taskmanagerkmpapp.ui.screens.TaskListScreen
+import com.example.taskmanagerkmpapp.ui.TaskListScreen
+import com.example.taskmanagerkmpapp.ui.AddTaskScreen
 
 @Composable
 fun App() {
@@ -22,11 +22,8 @@ fun App() {
     val uiState by viewModel.uiState.collectAsState()
 
     MaterialTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            when (val screen = uiState.currentScreen) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            when (uiState.currentScreen) {
                 is Screen.TaskList -> TaskListScreen(
                     tasks = uiState.tasks,
                     onAddTaskClick = { viewModel.navigateToAdd() },
@@ -35,9 +32,7 @@ fun App() {
                 )
                 is Screen.AddTask -> AddTaskScreen(
                     errorMessage = uiState.errorMessage,
-                    onSaveTask = { title, desc, priority ->
-                        viewModel.saveTask(title, desc, priority)
-                    },
+                    onSaveTask = { title, desc, priority -> viewModel.saveTask(title, desc, priority) },
                     onBack = { viewModel.navigateBack() }
                 )
             }
