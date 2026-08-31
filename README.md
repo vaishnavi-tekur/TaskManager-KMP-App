@@ -1,31 +1,63 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# TaskManagerKMPApp
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+A cross-platform Task Management application built using **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. This project shares ~95% of its code (UI, Logic, and Data) between Android and iOS.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+## 🚀 Overview
 
-### Running the apps
+This application demonstrates a unified development workflow where the user interface, business logic, and data models are written once in Kotlin and deployed to both mobile platforms.
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
-
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
-
-### Running tests
-
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
-
-- Android tests: `./gradlew :composeApp:testAndroidHostTest`
-- iOS tests: `./gradlew :composeApp:iosSimulatorArm64Test`
+### Key Features
+- **Shared UI**: Entirely built with Compose Multiplatform in the `composeApp` module.
+- **Dynamic Data**: Task data is parsed from a shared JSON resource using `kotlinx-serialization`.
+- **Priority Management**: Tasks support High, Medium, and Low priorities with visual indicators.
+- **Task Interaction**: Add, delete, and toggle task completion states.
 
 ---
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## 🛠 Tech Stack
+- **Kotlin Multiplatform**: Shared logic and infrastructure.
+- **Compose Multiplatform**: Shared UI for Android and iOS.
+- **Kotlinx Serialization**: JSON parsing across platforms.
+- **Material 3**: Modern design system implementation.
+
+---
+
+## 📂 Project Structure
+- `composeApp/`: The core of the application.
+    - `src/commonMain/`: Contains `App.kt` (UI Entry), `ui/` (Screens & ViewModel), `model/` (Data classes), and `repository/` (Logic).
+    - `src/commonMain/composeResources/`: Shared assets like `tasks.json`.
+    - `src/androidMain/` & `src/iosMain/`: Platform-specific entry points.
+- `androidApp/`: Android-specific configuration and launcher.
+- `iosApp/`: Xcode project for the iOS application.
+
+---
+
+## 💻 How to Run
+
+### Android (Windows/Mac/Linux)
+1. Open the project in **Android Studio**.
+2. Select the `androidApp` configuration in the top toolbar.
+3. Click **Run** to deploy to an emulator or physical device.
+
+### iOS (Mac Only)
+1. Ensure you have **Xcode** installed.
+2. In Android Studio, select the `iosApp` configuration.
+3. Click **Run** to build and launch the iOS Simulator.
+4. *Alternatively:* Open the `iosApp/iosApp.xcworkspace` file in Xcode and run from there.
+
+---
+
+## 👨‍💻 Developer Notes for Reviewers
+
+### Branch Strategy
+This project follows a clean architecture pattern with a dedicated ViewModel and UI separation in the `commonMain` module.
+
+### Interaction
+- The app loads initial data from `tasks.json`.
+- Use the **Pink FAB (+)** to navigate to the "Add New Task" screen.
+- Select a priority from the dropdown and save to see it update in the shared `TaskList`.
+
+---
+
+## 📞 Contact
+For any questions regarding the shared architecture or platform-specific implementations, please reach out to the project maintainer.

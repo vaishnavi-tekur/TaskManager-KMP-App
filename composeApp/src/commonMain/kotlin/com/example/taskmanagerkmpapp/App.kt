@@ -1,381 +1,46 @@
 package com.example.taskmanagerkmpapp
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.taskmanagerkmpapp.model.Priority
-import com.example.taskmanagerkmpapp.model.Task
-
-sealed class Screen {
-    object Welcome : Screen()
-    object TaskList : Screen()
-    object AddTask : Screen()
-}
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.taskmanagerkmpapp.repository.TaskRepository
+import com.example.taskmanagerkmpapp.ui.Screen
+import com.example.taskmanagerkmpapp.ui.TaskViewModel
+import com.example.taskmanagerkmpapp.ui.screens.AddTaskScreen
+import com.example.taskmanagerkmpapp.ui.screens.TaskListScreen
 
 @Composable
 fun App() {
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Welcome) }
-    var taskList by remember {
-        mutableStateOf(
-            listOf(
-                Task(1, "Complete Project Proposal", "Finalize the draft for the TaskManager project", false, Priority.High),
-                Task(2, "Buy Groceries", "Milk, Eggs, Bread, and Fruits", false, Priority.Medium),
-                Task(3, "Workout", "Morning cardio and strength training", false, Priority.Low)
-            )
-        )
-    }
+    val repository = remember { TaskRepository() }
+    val viewModel: TaskViewModel = viewModel { TaskViewModel(repository) }
+    val uiState by viewModel.uiState.collectAsState()
 
     MaterialTheme {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            when (currentScreen) {
-                is Screen.Welcome -> WelcomeScreen(
-                    onGetStarted = { currentScreen = Screen.TaskList }
-                )
+            when (val screen = uiState.currentScreen) {
                 is Screen.TaskList -> TaskListScreen(
-                    tasks = taskList,
-                    onAddTaskClick = { currentScreen = Screen.AddTask },
-                    onDeleteTask = { task -> taskList = taskList.filter { it.id != task.id } },
-                    onToggleTask = { task ->
-                        taskList = taskList.map {
-                            if (it.id == task.id) it.copy(isCompleted = !it.isCompleted) else it
-                        }
-                    }
+                    tasks = uiState.tasks,
+                    onAddTaskClick = { viewModel.navigateToAdd() },
+                    onDeleteTask = { viewModel.deleteTask(it) },
+                    onToggleTask = { viewModel.toggleTask(it) }
                 )
                 is Screen.AddTask -> AddTaskScreen(
+                    errorMessage = uiState.errorMessage,
                     onSaveTask = { title, desc, priority ->
-                        val newTask = Task(
-                            id = (taskList.maxOfOrNull { it.id } ?: 0) + 1,
-                            title = title,
-                            description = desc,
-                            isCompleted = false,
-                            priority = priority
-                        )
-                        taskList = taskList + newTask
-                        currentScreen = Screen.TaskList
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun WelcomeScreen(onGetStarted: () -> Unit) {
-    val darkBlue = Color(0xFF1A237E)
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Welcome to",
-            color = Color.Gray,
-            fontSize = 18.sp
-        )
-        Text(
-            text = "Task Manager",
-            color = darkBlue,
-            fontSize = 36.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(48.dp))
-        Button(
-            onClick = onGetStarted,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = darkBlue),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("GET STARTED", color = Color.White, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-fun TaskListScreen(
-    tasks: List<Task>,
-    onAddTaskClick: () -> Unit,
-    onDeleteTask: (Task) -> Unit,
-    onToggleTask: (Task) -> Unit
-) {
-    val darkBlue = Color(0xFF1A237E)
-    val pink = Color(0xFFF06292)
-
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddTaskClick,
-                containerColor = pink,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Task")
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Header Section
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(darkBlue)
-                    .padding(24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "My Tasks",
-                            color = Color.White,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "28.08.2026",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 14.sp
-                        )
-                    }
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.size(70.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "${tasks.size}",
-                                color = darkBlue,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Tasks",
-                                color = Color.Gray,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Task List Section
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFF5F5F5))
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(tasks) { task ->
-                    TaskItem(
-                        task = task,
-                        onDelete = { onDeleteTask(task) },
-                        onToggle = { onToggleTask(task) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TaskItem(
-    task: Task,
-    onDelete: () -> Unit,
-    onToggle: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = task.isCompleted,
-                onCheckedChange = { onToggle() }
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = task.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Color.Black
-                )
-                Text(
-                    text = task.description,
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-                Text(
-                    text = task.priority.name,
-                    color = when (task.priority) {
-                        Priority.High -> Color.Red
-                        Priority.Medium -> Color(0xFFFFA000)
-                        Priority.Low -> Color(0xFF4CAF50)
+                        viewModel.saveTask(title, desc, priority)
                     },
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 4.dp)
+                    onBack = { viewModel.navigateBack() }
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = Color(0xFFFFCDD2)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun AddTaskScreen(
-    onSaveTask: (String, String, Priority) -> Unit
-) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var priority by remember { mutableStateOf(Priority.High) }
-    var expanded by remember { mutableStateOf(false) }
-
-    val darkBlue = Color(0xFF1A237E)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Add New Task",
-            color = darkBlue,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 32.dp)
-        )
-
-        TextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Task Title") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = darkBlue,
-                unfocusedIndicatorColor = Color.Gray
-            )
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextField(
-            value = description,
-            onValueChange = { description = it },
-            label = { Text("Task Description") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = darkBlue,
-                unfocusedIndicatorColor = Color.Gray
-            )
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Column {
-                Text(
-                    text = "Select Priority",
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
-                TextButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = priority.name, color = Color.Black)
-                        Text(text = "▼", color = Color.Gray)
-                    }
-                }
-                HorizontalDivider(color = Color.Gray, thickness = 1.dp)
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                Priority.entries.forEach { p ->
-                    DropdownMenuItem(
-                        text = { Text(p.name) },
-                        onClick = {
-                            priority = p
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Button(
-            onClick = { if (title.isNotBlank()) onSaveTask(title, description, priority) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = darkBlue),
-            shape = RoundedCornerShape(4.dp)
-        ) {
-            Text(text = "SAVE TASK", color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
