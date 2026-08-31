@@ -1,63 +1,60 @@
 # TaskManagerKMPApp
 
-A cross-platform Task Management application built using **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. This project shares ~95% of its code (UI, Logic, and Data) between Android and iOS.
+A professional cross-platform Task Management application built using **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. 
 
 ## 🚀 Overview
 
-This application demonstrates a unified development workflow where the user interface, business logic, and data models are written once in Kotlin and deployed to both mobile platforms.
+This application demonstrates a clean architecture approach for KMP projects, sharing UI, business logic, and data management between Android and iOS.
 
 ### Key Features
-- **Shared UI**: Entirely built with Compose Multiplatform in the `composeApp` module.
-- **Dynamic Data**: Task data is parsed from a shared JSON resource using `kotlinx-serialization`.
-- **Priority Management**: Tasks support High, Medium, and Low priorities with visual indicators.
-- **Task Interaction**: Add, delete, and toggle task completion states.
+- **Dynamic Welcome Flow**: Engaging entry screen for new users.
+- **Task Management**: Full CRUD-like capabilities (Add, Toggle Completion, Delete).
+- **Priority System**: Visual color-coded indicators for High, Medium, and Low priorities.
+- **Shared Data Layer**: Centralized repository handling state and initial data loading.
+- **Robust Validation**: Domain-level validation rules for task creation.
 
 ---
 
 ## 🛠 Tech Stack
-- **Kotlin Multiplatform**: Shared logic and infrastructure.
-- **Compose Multiplatform**: Shared UI for Android and iOS.
-- **Kotlinx Serialization**: JSON parsing across platforms.
+- **Kotlin Multiplatform**: Infrastructure for shared code.
+- **Compose Multiplatform**: Declarative UI shared across Android and iOS.
+- **ViewModel (Jetpack)**: Shared state management in `commonMain`.
+- **Kotlinx Coroutines & Flow**: Reactive data streams for UI updates.
+- **Kotlinx Serialization**: Shared JSON parsing.
 - **Material 3**: Modern design system implementation.
 
 ---
 
-## 📂 Project Structure
-- `composeApp/`: The core of the application.
-    - `src/commonMain/`: Contains `App.kt` (UI Entry), `ui/` (Screens & ViewModel), `model/` (Data classes), and `repository/` (Logic).
-    - `src/commonMain/composeResources/`: Shared assets like `tasks.json`.
-    - `src/androidMain/` & `src/iosMain/`: Platform-specific entry points.
-- `androidApp/`: Android-specific configuration and launcher.
-- `iosApp/`: Xcode project for the iOS application.
+## 📂 Architecture
+The project follows a clean, layered architecture:
+- **UI Layer (`ui/`)**: Purely declarative Composables (`Screens.kt`) and a shared `TaskViewModel`.
+- **Domain Layer (`domain/`)**: Pure business logic and validation rules (`TaskValidator`).
+- **Data Layer (`repository/`)**: Single source of truth for task data and state mutations.
+- **Model Layer (`model/`)**: Shared data structures.
 
 ---
 
 ## 💻 How to Run
 
-### Android (Windows/Mac/Linux)
-1. Open the project in **Android Studio**.
-2. Select the `androidApp` configuration in the top toolbar.
-3. Click **Run** to deploy to an emulator or physical device.
+### Android
+1. Select the `androidApp` configuration in **Android Studio**.
+2. Click **Run**.
 
-### iOS (Mac Only)
-1. Ensure you have **Xcode** installed.
-2. In Android Studio, select the `iosApp` configuration.
-3. Click **Run** to build and launch the iOS Simulator.
-4. *Alternatively:* Open the `iosApp/iosApp.xcworkspace` file in Xcode and run from there.
+### iOS
+1. Select the `iosApp` configuration.
+2. Click **Run** (Requires Xcode on macOS).
 
 ---
 
-## 👨‍💻 Developer Notes for Reviewers
+## 🧪 Testing
+The project includes a robust test suite in `commonTest` covering:
+- **Validation Rules**: Ensuring data integrity.
+- **Repository Logic**: Verifying state mutations.
+- **ViewModel Transitions**: Testing UI state flow and navigation.
 
-### Branch Strategy
-This project follows a clean architecture pattern with a dedicated ViewModel and UI separation in the `commonMain` module.
-
-### Interaction
-- The app loads initial data from `tasks.json`.
-- Use the **Pink FAB (+)** to navigate to the "Add New Task" screen.
-- Select a priority from the dropdown and save to see it update in the shared `TaskList`.
+Run tests using: `./gradlew :composeApp:allTests`
 
 ---
 
-## 📞 Contact
-For any questions regarding the shared architecture or platform-specific implementations, please reach out to the project maintainer.
+## 👨‍💻 Developer Notes
+This branch (`task/kmp-project-setup`) contains the complete refactor to address senior lead review comments, focusing on layer boundaries and removal of all scaffold boilerplate.

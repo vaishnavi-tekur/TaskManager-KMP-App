@@ -23,6 +23,7 @@ import com.example.taskmanagerkmpapp.model.Task
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
+    currentDate: String,
     onAddTaskClick: () -> Unit,
     onDeleteTask: (Task) -> Unit,
     onToggleTask: (Task) -> Unit
@@ -59,7 +60,7 @@ fun TaskListScreen(
                 ) {
                     Column {
                         Text("My Tasks", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                        Text("31.08.2026", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                        Text(currentDate, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
                     }
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color.White),
