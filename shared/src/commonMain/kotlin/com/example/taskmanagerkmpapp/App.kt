@@ -5,7 +5,9 @@ import androidx.compose.runtime.*
 
 @Composable
 fun App() {
-    var currentScreen by remember { mutableStateOf("taskList") }
+    val authRepository = remember { MockAuthRepository() }
+    var currentScreen by remember { mutableStateOf("login") }
+    var loggedInUser by remember { mutableStateOf<UserProfile?>(null) }
     var tasks by remember {
         mutableStateOf(
             listOf(
@@ -19,6 +21,26 @@ fun App() {
 
     MaterialTheme {
         when (currentScreen) {
+            "login" -> LoginScreen(
+                authRepository = authRepository,
+                onLoginSuccess = { user ->
+                    loggedInUser = user
+                    currentScreen = "profile"
+                }
+            )
+            "profile" -> ProfileScreen(
+                user = loggedInUser ?: UserProfile(
+                    id = "guest",
+                    username = "guest",
+                    name = "Guest User",
+                    email = "guest@example.com"
+                ),
+                onContinue = { currentScreen = "taskList" },
+                onLogout = {
+                    loggedInUser = null
+                    currentScreen = "login"
+                }
+            )
             "taskList" -> TaskListScreen(
                 tasks = tasks,
                 onAddTaskClick = { currentScreen = "addTask" },
