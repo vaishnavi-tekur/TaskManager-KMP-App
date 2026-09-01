@@ -20,7 +20,7 @@ kotlin {
     }
 
     android {
-        namespace = "com.example.taskmanagerkmpapp.shared"
+        namespace = "com.example.taskmanagerkmpapp"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
@@ -59,6 +59,7 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }

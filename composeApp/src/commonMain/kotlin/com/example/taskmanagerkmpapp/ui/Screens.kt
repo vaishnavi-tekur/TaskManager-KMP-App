@@ -21,6 +21,31 @@ import com.example.taskmanagerkmpapp.model.Priority
 import com.example.taskmanagerkmpapp.model.Task
 
 @Composable
+fun WelcomeScreen(onGetStarted: () -> Unit) {
+    val darkBlue = Color(0xFF1A237E)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(text = "Welcome to", color = Color.Gray, fontSize = 18.sp)
+        Text(text = "Task Manager", color = darkBlue, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(48.dp))
+        Button(
+            onClick = onGetStarted,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = darkBlue),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("GET STARTED", color = Color.White, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
 fun TaskListScreen(
     tasks: List<Task>,
     currentDate: String,
@@ -45,14 +70,8 @@ fun TaskListScreen(
         },
         floatingActionButtonPosition = FabPosition.End
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().background(darkBlue).padding(24.dp)
-            ) {
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            Column(modifier = Modifier.fillMaxWidth().background(darkBlue).padding(24.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
