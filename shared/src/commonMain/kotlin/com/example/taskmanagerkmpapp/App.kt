@@ -14,45 +14,48 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
-private object DemoRepo {
-    data class User(val name:String,val username:String,val email:String)
-    data class Task(val id:Int,val title:String,val desc:String,val priority:String,val done:Boolean=false)
-    val users = mutableMapOf("admin" to User("Jane Doe","admin","jane@example.com"))
+private data class User(val name:String, val username:String, val email:String)
+private data class Task(val id:Int, val title:String, val description:String, val priority:String = "Medium", val done:Boolean = false)
+private object Repo {
+    val users = mutableMapOf("admin" to User("Jane Doe", "admin", "jane@example.com"))
     val pass = mutableMapOf("admin" to "password123")
-    val tasks = mutableMapOf("admin" to listOf(Task(1,"Project", "Finalize app flow","High"), Task(2,"Groceries","Milk, Eggs","Medium")))
-    suspend fun login(u:String,p:String): User? = if (pass[u]==p) users[u] else null
-    suspend fun register(name:String,u:String,email:String,p:String): User? {
+    val tasks = mutableMapOf("admin" to listOf(Task(1,"Project","Finalize app flow","High"), Task(2,"Groceries","Milk, Eggs","Medium")))
+    suspend fun login(u:String,p:String): User? = if (pass[u] == p) users[u] else null
+    suspend fun register(n:String,u:String,e:String,p:String): User? {
         if (users.containsKey(u)) return null
-        users[u]=User(name,u,email); pass[u]=p; tasks[u] = emptyList(); return users[u]
+        users[u] = User(n, u, e)
+        pass[u] = p
+        tasks[u] = emptyList()
+        return users[u]
     }
-    suspend fun reset(email:String,newPass:String): Boolean {
-        val user = users.values.firstOrNull { it.email == email } ?: return false
-        pass[user.username] = newPass; return true
+    suspend fun reset(e:String, np:String): Boolean {
+        val user = users.values.firstOrNull { it.email == e } ?: return false
+        pass[user.username] = np
+        return true
     }
 }
 
 @Composable
 fun App() {
     var screen by remember { mutableStateOf("login") }
-    var user by remember { mutableStateOf<DemoRepo.User?>(null) }
+    var user by remember { mutableStateOf<User?>(null) }
     var mode by remember { mutableStateOf("login") }
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("admin") }
     var email by remember { mutableStateOf("jane@example.com") }
     var password by remember { mutableStateOf("password123") }
     var newPassword by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val blue = Color(0xFF1A237E)
-    fun saveTask(task: DemoRepo.Task) { val u=user?.username ?: return; val list = DemoRepo.tasks[u] ?: emptyList(); DemoRepo.tasks[u] = list + task }
-    fun toggleTask(id:Int) { val u=user?.username ?: return; DemoRepo.tasks[u] = (DemoRepo.tasks[u] ?: emptyList()).map { if (it.id==id) it.copy(done=!it.done) else it } }
-    fun deleteTask(id:Int) { val u=user?.username ?: return; DemoRepo.tasks[u] = (DemoRepo.tasks[u] ?: emptyList()).filter { it.id!=id } }
 
     MaterialTheme {
         Box(Modifier.fillMaxSize().background(Color(0xFFF5F5F5)), contentAlignment = Alignment.Center) {
-            Card(Modifier.fillMaxWidth().padding(horizontal=24.dp), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                if (screen == "login") {
-                    Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Card(Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                when (screen) {
+                    "login" -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(if (mode == "register") "Create account" else if (mode == "forgot") "Reset password" else "Welcome back", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                         if (mode == "register") OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Full Name") }, singleLine = true)
                         if (mode != "forgot") OutlinedTextField(username, { username = it }, Modifier.fillMaxWidth(), label = { Text("Username") }, singleLine = true)
@@ -63,9 +66,9 @@ fun App() {
                         Button(onClick = {
                             scope.launch {
                                 val result = when (mode) {
-                                    "register" -> DemoRepo.register(name, username, email, password)
-                                    "forgot" -> if (DemoRepo.reset(email, newPassword)) DemoRepo.User("","",email) else null
-                                    else -> DemoRepo.login(username, password)
+                                    "register" -> Repo.register(name, username, email, password)
+                                    "forgot" -> if (Repo.reset(email, newPassword)) User("", "", email) else null
+                                    else -> Repo.login(username, password)
                                 }
                                 when {
                                     mode == "register" && result != null -> { user = result; screen = "tasks" }
@@ -82,21 +85,36 @@ fun App() {
                             if (mode == "login") TextButton(onClick = { mode = "forgot"; error = "" }) { Text("Forgot password", color = blue) }
                         }
                     }
-                } else {
-                    Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("${user?.name ?: "User"}'s Tasks", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                        val tasks = DemoRepo.tasks[user?.username ?: ""] ?: emptyList()
-                        tasks.forEach { task ->
-                            Card(Modifier.fillMaxWidth(), shape=RoundedCornerShape(10.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F4FF))) {
-                                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Column(Modifier.weight(1f)) { Text(task.title, fontWeight = FontWeight.Bold); Text(task.desc, fontSize = 12.sp, color = Color.Gray) }
-                                    Checkbox(task.done, onCheckedChange = { toggleTask(task.id) })
+                    "tasks" -> {
+                        val items = Repo.tasks[user?.username ?: ""] ?: emptyList()
+                        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("${user?.name ?: "User"}'s Tasks", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            items.forEach { task ->
+                                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F4FF))) {
+                                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Column(Modifier.weight(1f)) { Text(task.title, fontWeight = FontWeight.Bold); Text(task.description, fontSize = 12.sp, color = Color.Gray) }
+                                        Checkbox(task.done, onCheckedChange = { val current = Repo.tasks[user?.username ?: ""] ?: emptyList(); Repo.tasks[user?.username ?: ""] = current.map { if (it.id == task.id) it.copy(done = !it.done) else it } })
+                                    }
                                 }
                             }
+                            Button(onClick = { screen = "addTask" }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Add Task", color = Color.White) }
+                            OutlinedButton(onClick = { user = null; screen = "login"; mode = "login" }, Modifier.fillMaxWidth()) { Text("Logout") }
                         }
-                        Button(onClick = { val next = (tasks.size + 1); saveTask(DemoRepo.Task(next, "New Task", "Add description", "Medium")); }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Add Task", color = Color.White) }
-                        OutlinedButton(onClick = { user = null; screen = "login"; mode = "login" }, Modifier.fillMaxWidth()) { Text("Logout") }
                     }
+                    "addTask" -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Add Task", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("Title") }, singleLine = true)
+                        OutlinedTextField(description, { description = it }, Modifier.fillMaxWidth(), label = { Text("Description") })
+                        Button(onClick = {
+                            val current = Repo.tasks[user?.username ?: ""] ?: emptyList()
+                            if (title.isNotBlank() && description.isNotBlank()) {
+                                Repo.tasks[user?.username ?: ""] = current + Task((current.maxOfOrNull { it.id } ?: 0) + 1, title.trim(), description.trim())
+                                title = ""; description = ""; screen = "tasks"
+                            }
+                        }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Save Task", color = Color.White) }
+                        OutlinedButton(onClick = { title = ""; description = ""; screen = "tasks" }, Modifier.fillMaxWidth()) { Text("Cancel") }
+                    }
+                    else -> { }
                 }
             }
         }
