@@ -97,12 +97,23 @@ fun TaskListScreen(tasks: List<Task>, onBack: () -> Unit) {
             .background(Color(0xFFF5F5F5))
             .padding(16.dp)
     ) {
-        Text(
-            text = "My Tasks",
-            color = Color(0xFF1A237E),
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "My Tasks",
+                color = Color(0xFF1A237E),
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "${tasks.size} tasks",
+                color = Color.Gray,
+                fontWeight = FontWeight.Medium
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -116,7 +127,10 @@ fun TaskListScreen(tasks: List<Task>, onBack: () -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = onBack) {
+        Button(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Back to Welcome")
         }
     }
@@ -124,6 +138,12 @@ fun TaskListScreen(tasks: List<Task>, onBack: () -> Unit) {
 
 @Composable
 fun TaskRow(task: Task) {
+    val priorityColor = when (task.priority.lowercase()) {
+        "high" -> Color(0xFFE53935)
+        "medium" -> Color(0xFFFFA000)
+        else -> Color(0xFF43A047)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -139,7 +159,11 @@ fun TaskRow(task: Task) {
             Column {
                 Text(task.title, fontWeight = FontWeight.Bold)
                 Text(task.description, color = Color.Gray)
-                Text(task.priority, color = Color(0xFF1A237E), fontWeight = FontWeight.Medium)
+                Text(
+                    text = task.priority,
+                    color = priorityColor,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
