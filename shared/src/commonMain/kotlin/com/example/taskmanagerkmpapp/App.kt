@@ -5,7 +5,7 @@ import androidx.compose.runtime.*
 
 @Composable
 fun App() {
-    val authRepository = remember { MockAuthRepository() }
+    val authRepository = remember { MockAuthRepository }
     var currentScreen by remember { mutableStateOf("login") }
     var loggedInUser by remember { mutableStateOf<UserProfile?>(null) }
     var userTasks by remember {

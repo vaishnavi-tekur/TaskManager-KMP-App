@@ -19,11 +19,12 @@ fun LoginScreen(
     authRepository: AuthRepository,
     onLoginSuccess: (UserProfile) -> Unit
 ) {
-    var isRegisterMode by remember { mutableStateOf(false) }
+    var currentMode by remember { mutableStateOf("login") }
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("admin") }
     var email by remember { mutableStateOf("jane@example.com") }
     var password by remember { mutableStateOf("password123") }
+    var newPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -49,19 +50,27 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = if (isRegisterMode) "Create account" else "Welcome back",
+                    text = when (currentMode) {
+                        "register" -> "Create account"
+                        "forgot" -> "Reset password"
+                        else -> "Welcome back"
+                    },
                     color = darkBlue,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
-                    text = if (isRegisterMode) "Register to continue" else "Sign in to continue",
+                    text = when (currentMode) {
+                        "register" -> "Register to continue"
+                        "forgot" -> "Enter your email to reset password"
+                        else -> "Sign in to continue"
+                    },
                     color = Color.Gray,
                     fontSize = 14.sp
                 )
 
-                if (isRegisterMode) {
+                if (currentMode == "register") {
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -71,15 +80,17 @@ fun LoginScreen(
                     )
                 }
 
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                if (currentMode != "forgot") {
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text("Username") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
 
-                if (isRegisterMode) {
+                if (currentMode == "register" || currentMode == "forgot") {
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -89,14 +100,27 @@ fun LoginScreen(
                     )
                 }
 
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
-                )
+                if (currentMode == "forgot") {
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        label = { Text("New Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation()
+                    )
+                }
+
+                if (currentMode == "login" || currentMode == "register") {
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation()
+                    )
+                }
 
                 if (errorMessage.isNotEmpty()) {
                     Text(
@@ -109,40 +133,64 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        if (isRegisterMode) {
-                            if (name.isBlank() || username.isBlank() || email.isBlank() || password.isBlank()) {
-                                errorMessage = "All fields are required."
-                                return@Button
-                            }
+                        when (currentMode) {
+                            "register" -> {
+                                if (name.isBlank() || username.isBlank() || email.isBlank() || password.isBlank()) {
+                                    errorMessage = "All fields are required."
+                                    return@Button
+                                }
 
-                            isLoading = true
-                            errorMessage = ""
+                                isLoading = true
+                                errorMessage = ""
 
-                            scope.launch {
-                                val result = authRepository.register(name, username, email, password)
-                                isLoading = false
-                                if (result.success && result.user != null) {
-                                    onLoginSuccess(result.user)
-                                } else {
-                                    errorMessage = result.message
+                                scope.launch {
+                                    val result = authRepository.register(name, username, email, password)
+                                    isLoading = false
+                                    if (result.success && result.user != null) {
+                                        onLoginSuccess(result.user)
+                                    } else {
+                                        errorMessage = result.message
+                                    }
                                 }
                             }
-                        } else {
-                            if (username.isBlank() || password.isBlank()) {
-                                errorMessage = "Username and password are required."
-                                return@Button
+                            "forgot" -> {
+                                if (email.isBlank() || newPassword.isBlank()) {
+                                    errorMessage = "Email and new password are required."
+                                    return@Button
+                                }
+
+                                isLoading = true
+                                errorMessage = ""
+
+                                scope.launch {
+                                    val result = authRepository.resetPasswordByEmail(email, newPassword)
+                                    isLoading = false
+                                    if (result.success) {
+                                        currentMode = "login"
+                                        errorMessage = result.message
+                                        password = newPassword
+                                    } else {
+                                        errorMessage = result.message
+                                    }
+                                }
                             }
+                            else -> {
+                                if (username.isBlank() || password.isBlank()) {
+                                    errorMessage = "Username and password are required."
+                                    return@Button
+                                }
 
-                            isLoading = true
-                            errorMessage = ""
+                                isLoading = true
+                                errorMessage = ""
 
-                            scope.launch {
-                                val result = authRepository.login(username, password)
-                                isLoading = false
-                                if (result.success && result.user != null) {
-                                    onLoginSuccess(result.user)
-                                } else {
-                                    errorMessage = result.message
+                                scope.launch {
+                                    val result = authRepository.login(username, password)
+                                    isLoading = false
+                                    if (result.success && result.user != null) {
+                                        onLoginSuccess(result.user)
+                                    } else {
+                                        errorMessage = result.message
+                                    }
                                 }
                             }
                         }
@@ -153,24 +201,51 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = if (isLoading) {
-                            if (isRegisterMode) "Creating account..." else "Signing in..."
-                        } else {
-                            if (isRegisterMode) "Register" else "Login"
+                        text = when (currentMode) {
+                            "register" -> if (isLoading) "Creating account..." else "Register"
+                            "forgot" -> if (isLoading) "Updating..." else "Reset Password"
+                            else -> if (isLoading) "Signing in..." else "Login"
                         },
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                TextButton(
-                    onClick = { isRegisterMode = !isRegisterMode; errorMessage = "" },
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = if (isRegisterMode) "Already have an account? Login" else "New user? Register",
-                        color = darkBlue
-                    )
+                    TextButton(
+                        onClick = { currentMode = "login"; errorMessage = "" }
+                    ) {
+                        Text(
+                            text = if (currentMode == "login") "New user? Register" else "Back to Login",
+                            color = darkBlue
+                        )
+                    }
+
+                    if (currentMode == "login") {
+                        TextButton(
+                            onClick = { currentMode = "register"; errorMessage = "" }
+                        ) {
+                            Text(
+                                text = "Register",
+                                color = darkBlue
+                            )
+                        }
+                    }
+
+                    if (currentMode == "login") {
+                        TextButton(
+                            onClick = { currentMode = "forgot"; errorMessage = "" }
+                        ) {
+                            Text(
+                                text = "Forgot password",
+                                color = darkBlue
+                            )
+                        }
+                    }
                 }
             }
         }
