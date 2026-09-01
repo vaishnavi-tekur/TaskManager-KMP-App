@@ -58,20 +58,32 @@ data class ForgotPasswordResponse(
 )
 
 object MockAuthRepository : AuthRepository {
-    private val users = mutableMapOf<String, UserProfile>()
-    private val passwords = mutableMapOf<String, String>()
+    private val users = AppDataStorage.loadUsers().toMutableMap()
+    private val passwords = AppDataStorage.loadPasswords().toMutableMap()
     private val emailIndex = mutableMapOf<String, String>()
 
     init {
-        val defaultUser = UserProfile(
-            id = "user_101",
-            username = "admin",
-            name = "Jane Doe",
-            email = "jane@example.com"
-        )
-        users[defaultUser.username] = defaultUser
-        passwords[defaultUser.username] = "password123"
-        emailIndex[defaultUser.email.lowercase()] = defaultUser.username
+        if (users.isEmpty()) {
+            val defaultUser = UserProfile(
+                id = "user_101",
+                username = "admin",
+                name = "Jane Doe",
+                email = "jane@example.com"
+            )
+            users[defaultUser.username] = defaultUser
+            passwords[defaultUser.username] = "password123"
+            emailIndex[defaultUser.email.lowercase()] = defaultUser.username
+            persistData()
+        } else {
+            users.forEach { (username, user) ->
+                emailIndex[user.email.lowercase()] = username
+            }
+        }
+    }
+
+    private fun persistData() {
+        AppDataStorage.saveUsers(users)
+        AppDataStorage.savePasswords(passwords)
     }
 
     override suspend fun login(username: String, password: String): LoginResponse {
@@ -122,6 +134,7 @@ object MockAuthRepository : AuthRepository {
         users[trimmedUsername] = newUser
         passwords[trimmedUsername] = password
         emailIndex[normalizedEmail] = trimmedUsername
+        persistData()
 
         return RegisterResponse(
             success = true,
@@ -147,6 +160,7 @@ object MockAuthRepository : AuthRepository {
         }
 
         passwords[username] = newPassword
+        persistData()
         return ForgotPasswordResponse(success = true, message = "Password updated successfully")
     }
 }
