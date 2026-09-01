@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
+    userName: String = "User",
     onAddTaskClick: () -> Unit,
     onToggleTask: (Int) -> Unit,
     onDeleteTask: (Int) -> Unit,
@@ -57,7 +58,7 @@ fun TaskListScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("My Tasks", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("${userName}'s Tasks", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text("01.09.2026", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
                     }
                     Card(
