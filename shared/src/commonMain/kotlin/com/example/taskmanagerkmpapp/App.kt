@@ -8,16 +8,19 @@ fun App() {
     val authRepository = remember { MockAuthRepository() }
     var currentScreen by remember { mutableStateOf("login") }
     var loggedInUser by remember { mutableStateOf<UserProfile?>(null) }
-    var tasks by remember {
+    var userTasks by remember {
         mutableStateOf(
-            listOf(
-                Task(1, "Complete Project Proposal", "Finalize the draft for the TaskManager project and send it to the team.", "High"),
-                Task(2, "Buy Groceries", "Milk, Eggs, Bread, and Fruits.", "Medium"),
-                Task(3, "Workout", "Morning cardio and strength training.", "Low"),
-                Task(4, "Call Mom", "Catch up with family in the evening.", "Medium")
+            mapOf(
+                "admin" to listOf(
+                    Task(1, "Complete Project Proposal", "Finalize the draft for the TaskManager project and send it to the team.", "High"),
+                    Task(2, "Buy Groceries", "Milk, Eggs, Bread, and Fruits.", "Medium"),
+                    Task(3, "Workout", "Morning cardio and strength training.", "Low")
+                )
             )
         )
     }
+
+    val currentUserTasks = loggedInUser?.username?.let { userTasks[it] } ?: emptyList()
 
     MaterialTheme {
         when (currentScreen) {
@@ -42,41 +45,54 @@ fun App() {
                 }
             )
             "taskList" -> TaskListScreen(
-                tasks = tasks,
+                tasks = currentUserTasks,
+                userName = loggedInUser?.name ?: "User",
                 onAddTaskClick = { currentScreen = "addTask" },
                 onToggleTask = { taskId ->
-                    tasks = tasks.map { task ->
+                    val username = loggedInUser?.username ?: return@TaskListScreen
+                    val updatedList = (userTasks[username] ?: emptyList()).map { task ->
                         if (task.id == taskId) task.copy(isCompleted = !task.isCompleted) else task
                     }
+                    userTasks = userTasks + (username to updatedList)
                 },
                 onDeleteTask = { taskId ->
-                    tasks = tasks.filter { it.id != taskId }
+                    val username = loggedInUser?.username ?: return@TaskListScreen
+                    val updatedList = (userTasks[username] ?: emptyList()).filter { it.id != taskId }
+                    userTasks = userTasks + (username to updatedList)
                 }
             )
             "addTask" -> AddTaskScreen(
                 onSave = { title, description, priority ->
+                    val username = loggedInUser?.username ?: return@AddTaskScreen
+                    val existing = userTasks[username] ?: emptyList()
                     if (title.isNotBlank() && description.isNotBlank()) {
-                        tasks = tasks + Task(
-                            id = (tasks.maxOfOrNull { it.id } ?: 0) + 1,
+                        val newTask = Task(
+                            id = (existing.maxOfOrNull { it.id } ?: 0) + 1,
                             title = title,
                             description = description,
                             priority = priority
                         )
+                        userTasks = userTasks + (username to existing + newTask)
                         currentScreen = "taskList"
                     }
                 },
                 onBack = { currentScreen = "taskList" }
             )
             else -> TaskListScreen(
-                tasks = tasks,
+                tasks = currentUserTasks,
+                userName = loggedInUser?.name ?: "User",
                 onAddTaskClick = { currentScreen = "addTask" },
                 onToggleTask = { taskId ->
-                    tasks = tasks.map { task ->
+                    val username = loggedInUser?.username ?: return@TaskListScreen
+                    val updatedList = (userTasks[username] ?: emptyList()).map { task ->
                         if (task.id == taskId) task.copy(isCompleted = !task.isCompleted) else task
                     }
+                    userTasks = userTasks + (username to updatedList)
                 },
                 onDeleteTask = { taskId ->
-                    tasks = tasks.filter { it.id != taskId }
+                    val username = loggedInUser?.username ?: return@TaskListScreen
+                    val updatedList = (userTasks[username] ?: emptyList()).filter { it.id != taskId }
+                    userTasks = userTasks + (username to updatedList)
                 }
             )
         }

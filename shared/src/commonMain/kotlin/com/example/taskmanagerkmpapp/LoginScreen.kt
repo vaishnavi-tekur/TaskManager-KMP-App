@@ -19,7 +19,10 @@ fun LoginScreen(
     authRepository: AuthRepository,
     onLoginSuccess: (UserProfile) -> Unit
 ) {
+    var isRegisterMode by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("admin") }
+    var email by remember { mutableStateOf("jane@example.com") }
     var password by remember { mutableStateOf("password123") }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -46,17 +49,27 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Welcome back",
+                    text = if (isRegisterMode) "Create account" else "Welcome back",
                     color = darkBlue,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
-                    text = "Sign in to continue",
+                    text = if (isRegisterMode) "Register to continue" else "Sign in to continue",
                     color = Color.Gray,
                     fontSize = 14.sp
                 )
+
+                if (isRegisterMode) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Full Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
 
                 OutlinedTextField(
                     value = username,
@@ -65,6 +78,16 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+
+                if (isRegisterMode) {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
 
                 OutlinedTextField(
                     value = password,
@@ -86,21 +109,41 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        if (username.isBlank() || password.isBlank()) {
-                            errorMessage = "Username and password are required."
-                            return@Button
-                        }
+                        if (isRegisterMode) {
+                            if (name.isBlank() || username.isBlank() || email.isBlank() || password.isBlank()) {
+                                errorMessage = "All fields are required."
+                                return@Button
+                            }
 
-                        isLoading = true
-                        errorMessage = ""
+                            isLoading = true
+                            errorMessage = ""
 
-                        scope.launch {
-                            val result = authRepository.login(username, password)
-                            isLoading = false
-                            if (result.success && result.user != null) {
-                                onLoginSuccess(result.user)
-                            } else {
-                                errorMessage = result.message
+                            scope.launch {
+                                val result = authRepository.register(name, username, email, password)
+                                isLoading = false
+                                if (result.success && result.user != null) {
+                                    onLoginSuccess(result.user)
+                                } else {
+                                    errorMessage = result.message
+                                }
+                            }
+                        } else {
+                            if (username.isBlank() || password.isBlank()) {
+                                errorMessage = "Username and password are required."
+                                return@Button
+                            }
+
+                            isLoading = true
+                            errorMessage = ""
+
+                            scope.launch {
+                                val result = authRepository.login(username, password)
+                                isLoading = false
+                                if (result.success && result.user != null) {
+                                    onLoginSuccess(result.user)
+                                } else {
+                                    errorMessage = result.message
+                                }
                             }
                         }
                     },
@@ -110,9 +153,23 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = if (isLoading) "Signing in..." else "Login",
+                        text = if (isLoading) {
+                            if (isRegisterMode) "Creating account..." else "Signing in..."
+                        } else {
+                            if (isRegisterMode) "Register" else "Login"
+                        },
                         color = Color.White,
                         fontWeight = FontWeight.Bold
+                    )
+                }
+
+                TextButton(
+                    onClick = { isRegisterMode = !isRegisterMode; errorMessage = "" },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text(
+                        text = if (isRegisterMode) "Already have an account? Login" else "New user? Register",
+                        color = darkBlue
                     )
                 }
             }
