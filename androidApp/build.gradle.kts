@@ -11,7 +11,7 @@ kotlin {
     }
 }
 dependencies {
-    implementation(project(":shared"))
+    implementation(project(":composeApp"))
 
     implementation(libs.androidx.activity.compose)
 
@@ -50,5 +50,8 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }

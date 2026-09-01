@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "title": "Complete Project Proposal",
+    "description": "Finalize the draft for the TaskManager project and send it to the team.",
+    "isCompleted": false,
+    "priority": "High"
+  },
+  {
+    "id": 2,
+    "title": "Buy Groceries",
+    "description": "Milk, Eggs, Bread, and Fruits.",
+    "isCompleted": false,
+    "priority": "Medium"
+  },
+  {
+    "id": 3,
+    "title": "Workout",
+    "description": "Morning cardio and strength training.",
+    "isCompleted": false,
+    "priority": "Low"
+  },
+  {
+    "id": 4,
+    "title": "Call Mom",
+    "description": "Catch up with family in the evening.",
+    "isCompleted": false,
+    "priority": "Medium"
+  }
+]

@@ -1,31 +1,60 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# TaskManagerKMPApp
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+A professional cross-platform Task Management application built using **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. 
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+## 🚀 Overview
 
-### Running the apps
+This application demonstrates a clean architecture approach for KMP projects, sharing UI, business logic, and data management between Android and iOS.
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
-
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
-
-### Running tests
-
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
-
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
+### Key Features
+- **Dynamic Welcome Flow**: Engaging entry screen for new users.
+- **Task Management**: Full CRUD-like capabilities (Add, Toggle Completion, Delete).
+- **Priority System**: Visual color-coded indicators for High, Medium, and Low priorities.
+- **Shared Data Layer**: Centralized repository handling state and initial data loading.
+- **Robust Validation**: Domain-level validation rules for task creation.
 
 ---
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## 🛠 Tech Stack
+- **Kotlin Multiplatform**: Infrastructure for shared code.
+- **Compose Multiplatform**: Declarative UI shared across Android and iOS.
+- **ViewModel (Jetpack)**: Shared state management in `commonMain`.
+- **Kotlinx Coroutines & Flow**: Reactive data streams for UI updates.
+- **Kotlinx Serialization**: Shared JSON parsing.
+- **Material 3**: Modern design system implementation.
+
+---
+
+## 📂 Architecture
+The project follows a clean, layered architecture:
+- **UI Layer (`ui/`)**: Purely declarative Composables (`Screens.kt`) and a shared `TaskViewModel`.
+- **Domain Layer (`domain/`)**: Pure business logic and validation rules (`TaskValidator`).
+- **Data Layer (`repository/`)**: Single source of truth for task data and state mutations.
+- **Model Layer (`model/`)**: Shared data structures.
+
+---
+
+## 💻 How to Run
+
+### Android
+1. Select the `androidApp` configuration in **Android Studio**.
+2. Click **Run**.
+
+### iOS
+1. Select the `iosApp` configuration.
+2. Click **Run** (Requires Xcode on macOS).
+
+---
+
+## 🧪 Testing
+The project includes a robust test suite in `commonTest` covering:
+- **Validation Rules**: Ensuring data integrity.
+- **Repository Logic**: Verifying state mutations.
+- **ViewModel Transitions**: Testing UI state flow and navigation.
+
+Run tests using: `./gradlew :composeApp:allTests`
+
+---
+
+## 👨‍💻 Developer Notes
+This branch (`task/kmp-project-setup`) contains the complete refactor to address senior lead review comments, focusing on layer boundaries and removal of all scaffold boilerplate.
