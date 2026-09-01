@@ -1,49 +1,62 @@
 package com.example.taskmanagerkmpapp
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
-
-import taskmanagerkmpapp.shared.generated.resources.Res
-import taskmanagerkmpapp.shared.generated.resources.compose_multiplatform
 
 @Composable
-@Preview
 fun App() {
+    var currentScreen by remember { mutableStateOf("taskList") }
+    var tasks by remember {
+        mutableStateOf(
+            listOf(
+                Task(1, "Complete Project Proposal", "Finalize the draft for the TaskManager project and send it to the team.", "High"),
+                Task(2, "Buy Groceries", "Milk, Eggs, Bread, and Fruits.", "Medium"),
+                Task(3, "Workout", "Morning cardio and strength training.", "Low"),
+                Task(4, "Call Mom", "Catch up with family in the evening.", "Medium")
+            )
+        )
+    }
+
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+        when (currentScreen) {
+            "taskList" -> TaskListScreen(
+                tasks = tasks,
+                onAddTaskClick = { currentScreen = "addTask" },
+                onToggleTask = { taskId ->
+                    tasks = tasks.map { task ->
+                        if (task.id == taskId) task.copy(isCompleted = !task.isCompleted) else task
+                    }
+                },
+                onDeleteTask = { taskId ->
+                    tasks = tasks.filter { it.id != taskId }
                 }
-            }
+            )
+            "addTask" -> AddTaskScreen(
+                onSave = { title, description, priority ->
+                    if (title.isNotBlank() && description.isNotBlank()) {
+                        tasks = tasks + Task(
+                            id = (tasks.maxOfOrNull { it.id } ?: 0) + 1,
+                            title = title,
+                            description = description,
+                            priority = priority
+                        )
+                        currentScreen = "taskList"
+                    }
+                },
+                onBack = { currentScreen = "taskList" }
+            )
+            else -> TaskListScreen(
+                tasks = tasks,
+                onAddTaskClick = { currentScreen = "addTask" },
+                onToggleTask = { taskId ->
+                    tasks = tasks.map { task ->
+                        if (task.id == taskId) task.copy(isCompleted = !task.isCompleted) else task
+                    }
+                },
+                onDeleteTask = { taskId ->
+                    tasks = tasks.filter { it.id != taskId }
+                }
+            )
         }
     }
 }
