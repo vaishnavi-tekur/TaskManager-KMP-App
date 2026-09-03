@@ -13,6 +13,9 @@ private class AndroidSessionStorage(context: Context) : SessionStorage {
     override fun save(user: String, name: String, email: String, token: String) {
         preferences.edit().putString("user", user).putString("name", name).putString("email", email).putString("token", token).apply()
     }
+    override fun saveTasks(json: String) {
+        preferences.edit().putString("tasks_cache", json).apply()
+    }
     override fun read(key: String): String = preferences.getString(key, "") ?: ""
     override fun clear() = preferences.edit().clear().apply()
 }
@@ -23,6 +26,9 @@ private object MemorySessionStorage : SessionStorage {
     private val values = mutableMapOf<String, String>()
     override fun save(user: String, name: String, email: String, token: String) {
         values["user"] = user; values["name"] = name; values["email"] = email; values["token"] = token
+    }
+    override fun saveTasks(json: String) {
+        values["tasks_cache"] = json
     }
     override fun read(key: String): String = values[key] ?: ""
     override fun clear() = values.clear()

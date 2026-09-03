@@ -8,8 +8,15 @@ private class IOSSessionStorage : SessionStorage {
         defaults.setObject(user, "user"); defaults.setObject(name, "name")
         defaults.setObject(email, "email"); defaults.setObject(token, "token")
     }
+    override fun saveTasks(json: String) {
+        defaults.setObject(json, "tasks_cache")
+    }
     override fun read(key: String): String = defaults.stringForKey(key) ?: ""
-    override fun clear() { listOf("user", "name", "email", "token").forEach { defaults.removeObjectForKey(it) } }
+    override fun clear() { 
+        listOf("user", "name", "email", "token", "tasks_cache").forEach { 
+            defaults.removeObjectForKey(it) 
+        } 
+    }
 }
 
 actual fun sessionStorage(): SessionStorage = IOSSessionStorage()
