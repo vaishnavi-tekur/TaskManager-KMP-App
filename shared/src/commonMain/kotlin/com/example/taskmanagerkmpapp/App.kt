@@ -39,12 +39,12 @@ private object Repo {
 @Composable
 fun App() {
     val storage = remember { sessionStorage() }
-    var screen by remember { mutableStateOf("login") }
     var user by remember {
         mutableStateOf(storage.read("token").takeIf { it.isNotBlank() }?.let {
             User(storage.read("name"), storage.read("user"), storage.read("email"))
         })
     }
+    var screen by remember { mutableStateOf(if (user != null) "tasks" else "login") }
     var mode by remember { mutableStateOf("login") }
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("admin") }
