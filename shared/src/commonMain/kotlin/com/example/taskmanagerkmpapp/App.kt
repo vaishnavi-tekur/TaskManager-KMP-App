@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -45,9 +46,12 @@ fun App() {
     var email by remember { mutableStateOf("jane@example.com") }
     var password by remember { mutableStateOf("password123") }
     var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val blue = Color(0xFF1A237E)
 
@@ -60,10 +64,23 @@ fun App() {
                         if (mode == "register") OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Full Name") }, singleLine = true)
                         if (mode != "forgot") OutlinedTextField(username, { username = it }, Modifier.fillMaxWidth(), label = { Text("Username") }, singleLine = true)
                         if (mode != "login") OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("Email") }, singleLine = true)
-                        if (mode != "forgot") OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
-                        if (mode == "forgot") OutlinedTextField(newPassword, { newPassword = it }, Modifier.fillMaxWidth(), label = { Text("New Password") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
+                        if (mode != "forgot") OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true, visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { TextButton(onClick = { showPassword = !showPassword }) { Text(if (showPassword) "Hide" else "Show") } })
+                        if (mode == "register") OutlinedTextField(confirmPassword, { confirmPassword = it }, Modifier.fillMaxWidth(), label = { Text("Confirm Password") }, singleLine = true, visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation())
+                        if (mode == "forgot") OutlinedTextField(newPassword, { newPassword = it }, Modifier.fillMaxWidth(), label = { Text("New Password") }, singleLine = true, visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { TextButton(onClick = { showPassword = !showPassword }) { Text(if (showPassword) "Hide" else "Show") } })
                         if (error.isNotEmpty()) Text(error, color = Color(0xFFB00020), fontSize = 12.sp)
                         Button(onClick = {
+                            if (isLoading) return@Button
+                            error = when {
+                                mode == "register" && name.isBlank() -> "Name is required"
+                                mode != "forgot" && username.isBlank() -> "Username is required"
+                                mode != "login" && !email.contains("@") -> "Enter a valid email"
+                                mode != "forgot" && password.length < 6 -> "Password must be at least 6 characters"
+                                mode == "register" && password != confirmPassword -> "Passwords do not match"
+                                mode == "forgot" && newPassword.length < 6 -> "Password must be at least 6 characters"
+                                else -> ""
+                            }
+                            if (error.isNotEmpty()) return@Button
+                            isLoading = true
                             scope.launch {
                                 val result = when (mode) {
                                     "register" -> Repo.register(name, username, email, password)
@@ -72,13 +89,14 @@ fun App() {
                                 }
                                 when {
                                     mode == "register" && result != null -> { user = result; screen = "tasks" }
-                                    mode == "forgot" && result != null -> { mode = "login"; error = "Password updated" }
+                                    mode == "forgot" && result != null -> { mode = "login"; password = newPassword; error = "Password updated" }
                                     mode == "login" && result != null -> { user = result; screen = "tasks" }
                                     else -> error = "Invalid input"
                                 }
+                                isLoading = false
                             }
                         }, Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = blue)) {
-                            Text(if (mode == "register") "Register" else if (mode == "forgot") "Update" else "Login", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(if (isLoading) "Please wait..." else if (mode == "register") "Register" else if (mode == "forgot") "Update" else "Login", color = Color.White, fontWeight = FontWeight.Bold)
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                             TextButton(onClick = { mode = if (mode == "login") "register" else "login"; error = "" }) { Text(if (mode == "login") "New user? Register" else "Back to Login", color = blue) }
