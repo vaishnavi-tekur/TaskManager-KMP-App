@@ -92,9 +92,9 @@ fun App() {
                                     else -> Repo.login(username, password)
                                 }
                                 when {
-                                    mode == "register" && result != null -> { user = result.user; screen = "tasks"; items = Repo.tasks() }
+                                    mode == "register" && result != null -> { user = result.user; screen = "profile"; items = Repo.tasks() }
                                     mode == "forgot" && result != null -> { mode = "login"; password = newPassword; error = "Password updated" }
-                                    mode == "login" && result != null -> { user = result.user; screen = "tasks"; items = Repo.tasks() }
+                                    mode == "login" && result != null -> { user = result.user; screen = "profile"; items = Repo.tasks() }
                                     else -> error = "Invalid input"
                                 }
                                 if (result != null && !wasForgot) storage.save(result.user.username, result.user.name, result.user.email, result.token)
@@ -108,6 +108,15 @@ fun App() {
                             if (mode == "login") TextButton(onClick = { mode = "forgot"; error = "" }) { Text("Forgot password", color = blue) }
                         }
                     }
+                    "profile" -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text("Welcome, ${user?.name}", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Text("Your account details", color = Color.Gray)
+                        Text("Name: ${user?.name}")
+                        Text("Username: ${user?.username}")
+                        Text("Email: ${user?.email}")
+                        Button(onClick = { screen = "tasks" }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Continue to Tasks", color = Color.White) }
+                        OutlinedButton(onClick = { user = null; storage.clear(); screen = "login" }, Modifier.fillMaxWidth()) { Text("Logout") }
+                    }
                     "tasks" -> {
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(
@@ -117,6 +126,7 @@ fun App() {
                             ) {
                                 Column {
                                     Text("${user?.name ?: "User"}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                                    Text("Logged in as ${user?.username ?: "User"}", color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
                                     Text("03.09.2026", color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp)
                                 }
                                 Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(2.dp)) {
@@ -136,7 +146,7 @@ fun App() {
                                 }
                             }
                                 Button(onClick = { screen = "addTask" }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Add Task", color = Color.White) }
-                                OutlinedButton(onClick = { user = null; storage.clear(); screen = "login"; mode = "login" }, Modifier.fillMaxWidth()) { Text("Logout") }
+                                OutlinedButton(onClick = { user = null; storage.clear(); screen = "login"; mode = "login" }, Modifier.fillMaxWidth()) { Text("Back to Login") }
                             }
                         }
                     }
