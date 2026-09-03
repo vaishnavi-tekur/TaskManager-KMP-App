@@ -28,10 +28,10 @@ class BackendApi(private val client: HttpClient = createBackendClient()) {
     suspend fun login(user: String, password: String): AuthBody? = client.post("${backendUrl()}/login") { setBody(LoginBody(user, password)) }.bodyOrNull()
     suspend fun register(body: RegisterBody): ApiUser? = client.post("${backendUrl()}/register") { setBody(body) }.bodyOrNull()
     suspend fun reset(body: ResetBody): Boolean = client.post("${backendUrl()}/forgot-password") { setBody(body) }.status == HttpStatusCode.OK
-    suspend fun tasks(token: String) = client.get("${backendUrl()}/tasks") { auth(token) }.body<List<ApiTask>>()
-    suspend fun add(token: String, body: TaskBody) = client.post("${backendUrl()}/tasks") { auth(token); setBody(body) }.body<ApiTask>()
-    suspend fun complete(token: String, id: Long, done: Boolean) = client.put("${backendUrl()}/tasks/$id") { auth(token); setBody(CompleteBody(done)) }
-    suspend fun delete(token: String, id: Long) = client.delete("${backendUrl()}/tasks/$id") { auth(token) }
+    suspend fun tasks(token: String): List<ApiTask> = client.get("${backendUrl()}/tasks") { auth(token) }.bodyOrNull<List<ApiTask>>() ?: emptyList()
+    suspend fun add(token: String, body: TaskBody): ApiTask? = client.post("${backendUrl()}/tasks") { auth(token); setBody(body) }.bodyOrNull()
+    suspend fun complete(token: String, id: Long, done: Boolean): Boolean = client.put("${backendUrl()}/tasks/$id") { auth(token); setBody(CompleteBody(done)) }.status.value in 200..299
+    suspend fun delete(token: String, id: Long): Boolean = client.delete("${backendUrl()}/tasks/$id") { auth(token) }.status.value in 200..299
     private fun io.ktor.client.request.HttpRequestBuilder.auth(token: String) { header("Authorization", "Bearer $token") }
-    private suspend inline fun <reified T> io.ktor.client.statement.HttpResponse.bodyOrNull(): T? = if (status.value in 200..299) body() else null
+    private suspend inline fun <reified T> io.ktor.client.statement.HttpResponse.bodyOrNull(): T? = try { if (status.value in 200..299) body() else null } catch (e: Exception) { null }
 }

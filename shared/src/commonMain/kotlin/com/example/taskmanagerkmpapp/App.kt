@@ -21,13 +21,13 @@ private data class LoginResult(val user: User, val token: String)
 private object Repo {
     private val api = BackendApi()
     var token = ""
-    suspend fun login(u:String,p:String): LoginResult? = api.login(u,p)?.let { token = it.token; LoginResult(User(it.user.name,it.user.username,it.user.email),it.token) }
-    suspend fun register(n:String,u:String,e:String,p:String): LoginResult? = api.register(RegisterBody(n,u,e,p))?.let { login(u,p) }
-    suspend fun reset(e:String,np:String) = api.reset(ResetBody(e,np))
-    suspend fun tasks() = api.tasks(token).map { Task(it.id.toInt(),it.title,it.description,it.priority,it.completed) }
-    suspend fun add(task:Task) = api.add(token,TaskBody(task.title,task.description,task.priority))
-    suspend fun complete(id:Int,done:Boolean) = api.complete(token,id.toLong(),done)
-    suspend fun delete(id:Int) = api.delete(token,id.toLong())
+    suspend fun login(u:String,p:String): LoginResult? = try { api.login(u,p)?.let { token = it.token; LoginResult(User(it.user.name,it.user.username,it.user.email),it.token) } } catch (e: Exception) { null }
+    suspend fun register(n:String,u:String,e:String,p:String): LoginResult? = try { api.register(RegisterBody(n,u,e,p))?.let { login(u,p) } } catch (e: Exception) { null }
+    suspend fun reset(e:String,np:String) = try { api.reset(ResetBody(e,np)) } catch (e: Exception) { false }
+    suspend fun tasks(): List<Task> = try { api.tasks(token).map { Task(it.id.toInt(),it.title,it.description,it.priority,it.completed) } } catch (e: Exception) { emptyList() }
+    suspend fun add(task:Task) = try { api.add(token,TaskBody(task.title,task.description,task.priority)) } catch (e: Exception) { null }
+    suspend fun complete(id:Int,done:Boolean) = try { api.complete(token,id.toLong(),done) } catch (e: Exception) { false }
+    suspend fun delete(id:Int) = try { api.delete(token,id.toLong()) } catch (e: Exception) { false }
 }
 
 @Composable
@@ -85,19 +85,26 @@ fun App() {
                             if (error.isNotEmpty()) return@Button
                             isLoading = true
                             scope.launch {
-                                val wasForgot = mode == "forgot"
                                 val result = when (mode) {
                                     "register" -> Repo.register(name, username, email, password)
                                     "forgot" -> if (Repo.reset(email, newPassword)) LoginResult(User("", "", email), "") else null
                                     else -> Repo.login(username, password)
                                 }
-                                when {
-                                    mode == "register" && result != null -> { user = result.user; screen = "profile"; items = Repo.tasks() }
-                                    mode == "forgot" && result != null -> { mode = "login"; password = newPassword; error = "Password updated" }
-                                    mode == "login" && result != null -> { user = result.user; screen = "profile"; items = Repo.tasks() }
-                                    else -> error = "Invalid input"
+                                if (result != null) {
+                                    if (mode == "forgot") {
+                                        mode = "login"
+                                        password = newPassword
+                                        error = "Password updated"
+                                    } else {
+                                        user = result.user
+                                        storage.save(result.user.username, result.user.name, result.user.email, result.token)
+                                        Repo.token = result.token
+                                        items = Repo.tasks()
+                                        screen = "profile"
+                                    }
+                                } else {
+                                    error = "Network error or invalid credentials"
                                 }
-                                if (result != null && !wasForgot) storage.save(result.user.username, result.user.name, result.user.email, result.token)
                                 isLoading = false
                             }
                         }, Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = blue)) {
