@@ -118,6 +118,7 @@ fun TaskListScreen(tasks: List<Task>, onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn(
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(tasks) { task ->
