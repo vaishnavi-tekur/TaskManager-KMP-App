@@ -6,9 +6,11 @@ import java.sql.DriverManager
 import java.security.MessageDigest
 
 class Database(private val file: String = "data/taskmanager.db") {
-    private val connection = DriverManager.getConnection("jdbc:sqlite:$file").also { db ->
+    private val connection = run {
         Path.of(file).parent?.let { Files.createDirectories(it) }
+        DriverManager.getConnection("jdbc:sqlite:$file").also { db ->
         db.createStatement().use { it.executeUpdate("PRAGMA foreign_keys=ON"); it.executeUpdate("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,username TEXT UNIQUE NOT NULL,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL)"); it.executeUpdate("CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL,priority TEXT NOT NULL,is_completed INTEGER NOT NULL DEFAULT 0,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)") }
+        }
     }
 
     fun register(r: RegisterRequest): User? = connection.prepareStatement("INSERT INTO users(name,username,email,password_hash) VALUES(?,?,?,?)").use { s ->

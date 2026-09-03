@@ -17,28 +17,23 @@ import kotlinx.coroutines.launch
 
 private data class User(val name:String, val username:String, val email:String)
 private data class Task(val id:Int, val title:String, val description:String, val priority:String = "Medium", val done:Boolean = false)
+private data class LoginResult(val user: User, val token: String)
 private object Repo {
-    val users = mutableMapOf("admin" to User("Jane Doe", "admin", "jane@example.com"))
-    val pass = mutableMapOf("admin" to "password123")
-    val tasks = mutableMapOf("admin" to listOf(Task(1,"Project","Finalize app flow","High"), Task(2,"Groceries","Milk, Eggs","Medium")))
-    suspend fun login(u:String,p:String): User? = if (pass[u] == p) users[u] else null
-    suspend fun register(n:String,u:String,e:String,p:String): User? {
-        if (users.containsKey(u)) return null
-        users[u] = User(n, u, e)
-        pass[u] = p
-        tasks[u] = emptyList()
-        return users[u]
-    }
-    suspend fun reset(e:String, np:String): Boolean {
-        val user = users.values.firstOrNull { it.email == e } ?: return false
-        pass[user.username] = np
-        return true
-    }
+    private val api = BackendApi()
+    var token = ""
+    suspend fun login(u:String,p:String): LoginResult? = api.login(u,p)?.let { token = it.token; LoginResult(User(it.user.name,it.user.username,it.user.email),it.token) }
+    suspend fun register(n:String,u:String,e:String,p:String): LoginResult? = api.register(RegisterBody(n,u,e,p))?.let { login(u,p) }
+    suspend fun reset(e:String,np:String) = api.reset(ResetBody(e,np))
+    suspend fun tasks() = api.tasks(token).map { Task(it.id.toInt(),it.title,it.description,it.priority,it.completed) }
+    suspend fun add(task:Task) = api.add(token,TaskBody(task.title,task.description,task.priority))
+    suspend fun complete(id:Int,done:Boolean) = api.complete(token,id.toLong(),done)
+    suspend fun delete(id:Int) = api.delete(token,id.toLong())
 }
 
 @Composable
 fun App() {
     val storage = remember { sessionStorage() }
+    Repo.token = storage.read("token")
     var user by remember {
         mutableStateOf(storage.read("token").takeIf { it.isNotBlank() }?.let {
             User(storage.read("name"), storage.read("user"), storage.read("email"))
@@ -57,8 +52,11 @@ fun App() {
     var description by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var items by remember { mutableStateOf(emptyList<Task>()) }
     val scope = rememberCoroutineScope()
     val blue = Color(0xFF1A237E)
+
+    LaunchedEffect(user) { if (user != null && Repo.token.isNotBlank()) items = Repo.tasks() }
 
     MaterialTheme {
         Box(Modifier.fillMaxSize().background(Color(0xFFF5F5F5)), contentAlignment = Alignment.Center) {
@@ -90,16 +88,16 @@ fun App() {
                                 val wasForgot = mode == "forgot"
                                 val result = when (mode) {
                                     "register" -> Repo.register(name, username, email, password)
-                                    "forgot" -> if (Repo.reset(email, newPassword)) User("", "", email) else null
+                                    "forgot" -> if (Repo.reset(email, newPassword)) LoginResult(User("", "", email), "") else null
                                     else -> Repo.login(username, password)
                                 }
                                 when {
-                                    mode == "register" && result != null -> { user = result; screen = "tasks" }
+                                    mode == "register" && result != null -> { user = result.user; screen = "tasks"; items = Repo.tasks() }
                                     mode == "forgot" && result != null -> { mode = "login"; password = newPassword; error = "Password updated" }
-                                    mode == "login" && result != null -> { user = result; screen = "tasks" }
+                                    mode == "login" && result != null -> { user = result.user; screen = "tasks"; items = Repo.tasks() }
                                     else -> error = "Invalid input"
                                 }
-                                if (result != null && !wasForgot) storage.save(result.username, result.name, result.email, "session-${result.username}")
+                                if (result != null && !wasForgot) storage.save(result.user.username, result.user.name, result.user.email, result.token)
                                 isLoading = false
                             }
                         }, Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = blue)) {
@@ -111,7 +109,6 @@ fun App() {
                         }
                     }
                     "tasks" -> {
-                        val items = Repo.tasks[user?.username ?: ""] ?: emptyList()
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(
                                 Modifier.fillMaxWidth().background(blue).padding(24.dp),
@@ -134,7 +131,7 @@ fun App() {
                                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F4FF))) {
                                     Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                         Column(Modifier.weight(1f)) { Text(task.title, fontWeight = FontWeight.Bold); Text(task.description, fontSize = 12.sp, color = Color.Gray) }
-                                        Checkbox(task.done, onCheckedChange = { val current = Repo.tasks[user?.username ?: ""] ?: emptyList(); Repo.tasks[user?.username ?: ""] = current.map { if (it.id == task.id) it.copy(done = !it.done) else it } })
+                                        Checkbox(task.done, onCheckedChange = { scope.launch { Repo.complete(task.id, !task.done); items = Repo.tasks() } })
                                     }
                                 }
                             }
@@ -148,10 +145,11 @@ fun App() {
                         OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("Title") }, singleLine = true)
                         OutlinedTextField(description, { description = it }, Modifier.fillMaxWidth(), label = { Text("Description") })
                         Button(onClick = {
-                            val current = Repo.tasks[user?.username ?: ""] ?: emptyList()
                             if (title.isNotBlank() && description.isNotBlank()) {
-                                Repo.tasks[user?.username ?: ""] = current + Task((current.maxOfOrNull { it.id } ?: 0) + 1, title.trim(), description.trim())
-                                title = ""; description = ""; screen = "tasks"
+                                scope.launch {
+                                    Repo.add(Task(0, title.trim(), description.trim()))
+                                    items = Repo.tasks(); title = ""; description = ""; screen = "tasks"
+                                }
                             }
                         }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Save Task", color = Color.White) }
                         OutlinedButton(onClick = { title = ""; description = ""; screen = "tasks" }, Modifier.fillMaxWidth()) { Text("Cancel") }
