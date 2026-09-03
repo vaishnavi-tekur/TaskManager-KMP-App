@@ -8,12 +8,13 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
-expect fun createBackendClient(): HttpClient
+expect fun getBackendEngine(): io.ktor.client.engine.HttpClientEngine
 expect fun backendUrl(): String
 
 @Serializable data class ApiUser(val id: Long, val name: String, val username: String, val email: String)
@@ -26,10 +27,18 @@ expect fun backendUrl(): String
 @Serializable data class CompleteBody(val completed: Boolean)
 @Serializable data class MessageBody(val message: String)
 
-class BackendApi(private val client: HttpClient = createBackendClient()) {
+class BackendApi {
+    private val client = HttpClient(getBackendEngine()) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            })
+        }
+    }
+
     suspend fun login(user: String, password: String): AuthResponse = try {
         val resp = client.post("${backendUrl()}/login") { 
-            contentType(ContentType.Application.Json)
             setBody(LoginBody(user, password)) 
         }
         if (resp.status == HttpStatusCode.OK) AuthResponse.Success(resp.body<AuthBody>())
@@ -38,7 +47,6 @@ class BackendApi(private val client: HttpClient = createBackendClient()) {
 
     suspend fun register(body: RegisterBody): AuthResponse = try {
         val resp = client.post("${backendUrl()}/register") { 
-            contentType(ContentType.Application.Json)
             setBody(body) 
         }
         if (resp.status == HttpStatusCode.Created) {
@@ -48,7 +56,6 @@ class BackendApi(private val client: HttpClient = createBackendClient()) {
 
     suspend fun reset(body: ResetBody): Boolean = try { 
         client.post("${backendUrl()}/forgot-password") { 
-            contentType(ContentType.Application.Json)
             setBody(body) 
         }.status == HttpStatusCode.OK 
     } catch (e: Exception) { false }
@@ -62,7 +69,6 @@ class BackendApi(private val client: HttpClient = createBackendClient()) {
     suspend fun add(token: String, body: TaskBody): ApiTask? = try { 
         client.post("${backendUrl()}/tasks") { 
             auth(token)
-            contentType(ContentType.Application.Json)
             setBody(body) 
         }.body() 
     } catch (e: Exception) { null }
@@ -70,7 +76,6 @@ class BackendApi(private val client: HttpClient = createBackendClient()) {
     suspend fun complete(token: String, id: Long, done: Boolean): Boolean = try { 
         client.put("${backendUrl()}/tasks/$id") { 
             auth(token)
-            contentType(ContentType.Application.Json)
             setBody(CompleteBody(done)) 
         }.status.value in 200..299 
     } catch (e: Exception) { false }
