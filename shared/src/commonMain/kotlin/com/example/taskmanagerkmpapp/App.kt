@@ -112,8 +112,24 @@ fun App() {
                     }
                     "tasks" -> {
                         val items = Repo.tasks[user?.username ?: ""] ?: emptyList()
-                        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("${user?.name ?: "User"}'s Tasks", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth().background(blue).padding(24.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("${user?.name ?: "User"}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                                    Text("03.09.2026", color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp)
+                                }
+                                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(2.dp)) {
+                                    Column(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("${items.size}", color = blue, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                                        Text("Tasks", color = Color.Gray, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             items.forEach { task ->
                                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F4FF))) {
                                     Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -122,8 +138,9 @@ fun App() {
                                     }
                                 }
                             }
-                            Button(onClick = { screen = "addTask" }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Add Task", color = Color.White) }
-                            OutlinedButton(onClick = { user = null; storage.clear(); screen = "login"; mode = "login" }, Modifier.fillMaxWidth()) { Text("Logout") }
+                                Button(onClick = { screen = "addTask" }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Add Task", color = Color.White) }
+                                OutlinedButton(onClick = { user = null; storage.clear(); screen = "login"; mode = "login" }, Modifier.fillMaxWidth()) { Text("Logout") }
+                            }
                         }
                     }
                     "addTask" -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
