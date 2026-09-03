@@ -38,8 +38,13 @@ private object Repo {
 
 @Composable
 fun App() {
+    val storage = remember { sessionStorage() }
     var screen by remember { mutableStateOf("login") }
-    var user by remember { mutableStateOf<User?>(null) }
+    var user by remember {
+        mutableStateOf(storage.read("token").takeIf { it.isNotBlank() }?.let {
+            User(storage.read("name"), storage.read("user"), storage.read("email"))
+        })
+    }
     var mode by remember { mutableStateOf("login") }
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("admin") }
@@ -82,6 +87,7 @@ fun App() {
                             if (error.isNotEmpty()) return@Button
                             isLoading = true
                             scope.launch {
+                                val wasForgot = mode == "forgot"
                                 val result = when (mode) {
                                     "register" -> Repo.register(name, username, email, password)
                                     "forgot" -> if (Repo.reset(email, newPassword)) User("", "", email) else null
@@ -93,6 +99,7 @@ fun App() {
                                     mode == "login" && result != null -> { user = result; screen = "tasks" }
                                     else -> error = "Invalid input"
                                 }
+                                if (result != null && !wasForgot) storage.save(result.username, result.name, result.email, "session-${result.username}")
                                 isLoading = false
                             }
                         }, Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = blue)) {
@@ -116,7 +123,7 @@ fun App() {
                                 }
                             }
                             Button(onClick = { screen = "addTask" }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = blue)) { Text("Add Task", color = Color.White) }
-                            OutlinedButton(onClick = { user = null; screen = "login"; mode = "login" }, Modifier.fillMaxWidth()) { Text("Logout") }
+                            OutlinedButton(onClick = { user = null; storage.clear(); screen = "login"; mode = "login" }, Modifier.fillMaxWidth()) { Text("Logout") }
                         }
                     }
                     "addTask" -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
