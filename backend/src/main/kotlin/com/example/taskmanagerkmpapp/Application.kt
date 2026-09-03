@@ -19,29 +19,14 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-@Serializable
-data class RegisterRequest(val name: String, val username: String, val email: String, val password: String)
-
-@Serializable
-data class LoginRequest(val username: String, val password: String)
-
-@Serializable
-data class ResetPasswordRequest(val email: String, val newPassword: String)
-
-@Serializable
-data class User(val id: Long, val name: String, val username: String, val email: String)
-
-@Serializable
-data class AuthResponse(val token: String, val user: User)
-
-@Serializable
-data class MessageResponse(val message: String)
-
-@Serializable
-data class TaskRequest(val title: String, val description: String, val priority: String = "Medium")
-
-@Serializable
-data class Task(val id: Long, val title: String, val description: String, val priority: String, val completed: Boolean)
+@Serializable data class RegisterRequest(val name: String, val username: String, val email: String, val password: String)
+@Serializable data class LoginRequest(val username: String, val password: String)
+@Serializable data class ResetPasswordRequest(val email: String, val newPassword: String)
+@Serializable data class User(val id: Long, val name: String, val username: String, val email: String)
+@Serializable data class AuthResponse(val token: String, val user: User)
+@Serializable data class MessageResponse(val message: String)
+@Serializable data class TaskRequest(val title: String, val description: String, val priority: String = "Medium")
+@Serializable data class Task(val id: Long, val title: String, val description: String, val priority: String, val completed: Boolean)
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module).start(wait = true)
@@ -51,7 +36,6 @@ fun Application.module() {
     install(ContentNegotiation) { json() }
     val database = Database()
     val sessions = mutableMapOf<String, Long>()
-
     routing {
         post("/register") {
             val request = call.receive<RegisterRequest>()
@@ -61,8 +45,7 @@ fun Application.module() {
         }
         post("/login") {
             val request = call.receive<LoginRequest>()
-            val user = database.authenticate(request.username, request.password)
-                ?: return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid username or password"))
+            val user = database.authenticate(request.username, request.password) ?: return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid username or password"))
             val token = UUID.randomUUID().toString()
             sessions[token] = user.id
             call.respond(AuthResponse(token, user))
@@ -98,7 +81,4 @@ fun Application.module() {
     }
 }
 
-private fun ApplicationCall.userId(sessions: Map<String, Long>): Long? {
-    val token = request.headers["Authorization"]?.removePrefix("Bearer ") ?: return null
-    return sessions[token]
-}
+private fun ApplicationCall.userId(sessions: Map<String, Long>) = request.headers["Authorization"]?.removePrefix("Bearer ")?.let(sessions::get)
