@@ -8,7 +8,9 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
@@ -33,12 +35,14 @@ class BackendApi {
             json(Json {
                 ignoreUnknownKeys = true
                 isLenient = true
+                encodeDefaults = true
             })
         }
     }
 
     suspend fun login(user: String, password: String): AuthResponse = try {
         val resp = client.post("${backendUrl()}/login") { 
+            contentType(ContentType.Application.Json)
             setBody(LoginBody(user, password)) 
         }
         if (resp.status == HttpStatusCode.OK) AuthResponse.Success(resp.body<AuthBody>())
@@ -47,15 +51,17 @@ class BackendApi {
 
     suspend fun register(body: RegisterBody): AuthResponse = try {
         val resp = client.post("${backendUrl()}/register") { 
+            contentType(ContentType.Application.Json)
             setBody(body) 
         }
-        if (resp.status == HttpStatusCode.Created) {
+        if (resp.status == HttpStatusCode.Created || resp.status == HttpStatusCode.OK) {
             login(body.username, body.password)
         } else AuthResponse.Error(resp.bodyOrMessage())
     } catch (e: Exception) { AuthResponse.Error("Network error: ${e.message}") }
 
     suspend fun reset(body: ResetBody): Boolean = try { 
         client.post("${backendUrl()}/forgot-password") { 
+            contentType(ContentType.Application.Json)
             setBody(body) 
         }.status == HttpStatusCode.OK 
     } catch (e: Exception) { false }
@@ -69,6 +75,7 @@ class BackendApi {
     suspend fun add(token: String, body: TaskBody): ApiTask? = try { 
         client.post("${backendUrl()}/tasks") { 
             auth(token)
+            contentType(ContentType.Application.Json)
             setBody(body) 
         }.body() 
     } catch (e: Exception) { null }
@@ -76,6 +83,7 @@ class BackendApi {
     suspend fun complete(token: String, id: Long, done: Boolean): Boolean = try { 
         client.put("${backendUrl()}/tasks/$id") { 
             auth(token)
+            contentType(ContentType.Application.Json)
             setBody(CompleteBody(done)) 
         }.status.value in 200..299 
     } catch (e: Exception) { false }
