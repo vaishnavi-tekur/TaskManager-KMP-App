@@ -15,4 +15,12 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.6")
     testImplementation(kotlin("test"))
 }
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "com.example.taskmanagerkmpapp.ApplicationKt"
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+}
+
 application { mainClass.set("com.example.taskmanagerkmpapp.ApplicationKt") }
