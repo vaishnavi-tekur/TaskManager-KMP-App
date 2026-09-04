@@ -1,12 +1,9 @@
-# Stage 1: Build using an image with Android SDK
-FROM mobiledevops/android-sdk-image:34-jdk21 AS build
+# Stage 1: Build
+FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /app
 COPY . .
-
-# Ensure local.properties exists for Gradle
-RUN echo "sdk.dir=/opt/android-sdk" > local.properties
-
 RUN chmod +x gradlew
+# Build ONLY the backend, ignoring android modules
 RUN ./gradlew :backend:jar --no-daemon
 
 # Stage 2: Run

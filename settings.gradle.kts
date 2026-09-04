@@ -27,6 +27,9 @@ dependencyResolutionManagement {
     }
 }
 
-include(":androidApp")
-include(":shared")
 include(":backend")
+
+if (System.getenv("RENDER") == null) {
+    include(":androidApp")
+    include(":shared")
+}
