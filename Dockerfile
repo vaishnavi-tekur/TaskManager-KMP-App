@@ -2,6 +2,10 @@
 FROM mobiledevops/android-sdk-image:34-jdk21 AS build
 WORKDIR /app
 COPY . .
+
+# Ensure local.properties exists for Gradle
+RUN echo "sdk.dir=/opt/android-sdk" > local.properties
+
 RUN chmod +x gradlew
 RUN ./gradlew :backend:jar --no-daemon
 
