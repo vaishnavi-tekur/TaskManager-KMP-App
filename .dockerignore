@@ -1,0 +1,9 @@
+build/
+.gradle/
+.idea/
+data/
+*.db
+androidApp/build/
+shared/build/
+backend/build/
+iosApp/
