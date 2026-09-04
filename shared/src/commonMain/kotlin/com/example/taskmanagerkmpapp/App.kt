@@ -29,6 +29,10 @@ fun App() {
                     BackHandler { screen = "tasks" }
                     AddTaskScreen(blue, scope, { screen = it }, { items = it; storage.saveTasks(Json.encodeToString(it)) })
                 }
+                "forgotPassword" -> {
+                    BackHandler { screen = "login" }
+                    ForgotPasswordScreen(blue, scope, { screen = it })
+                }
                 "register" -> {
                     BackHandler { screen = "login" }
                     AuthScreen(screen, blue, scope, storage, { screen = it }, { u, tasks ->

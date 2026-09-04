@@ -8,8 +8,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
@@ -100,28 +102,176 @@ private fun TaskCard(task: Task, scope: CoroutineScope, onTasksUpdated: (List<Ta
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
     var title by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var priority by remember { mutableStateOf("Medium") }
+    var expanded by remember { mutableStateOf(false) }
 
-    Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Add Task", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("Title") }, singleLine = true)
-        OutlinedTextField(desc, { desc = it }, Modifier.fillMaxWidth(), label = { Text("Description") })
-        Text("Priority", fontWeight = FontWeight.Bold, color = blue, fontSize = 16.sp)
-        Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
-            listOf("Low", "Medium", "High").forEach { p ->
-                FilterChip(priority == p, { priority = p }, label = { Text(p) })
+    Scaffold(
+        topBar = {
+            Box(Modifier.fillMaxWidth().height(56.dp).background(Color(0xFF0D1B4D)))
+        }
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).background(Color.White)) {
+            Text(
+                text = "Add New Task",
+                modifier = Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 16.dp),
+                color = blue,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                TextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Task Title") },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Gray,
+                        unfocusedIndicatorColor = Color.LightGray
+                    ),
+                    singleLine = true
+                )
+
+                TextField(
+                    value = desc,
+                    onValueChange = { desc = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Task Description") },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Gray,
+                        unfocusedIndicatorColor = Color.LightGray
+                    )
+                )
+
+                Column {
+                    Text("Select Priority", color = Color.Gray, fontSize = 12.sp)
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        TextField(
+                            value = priority,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Gray,
+                                unfocusedIndicatorColor = Color.LightGray
+                            )
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            listOf("Low", "Medium", "High").forEach { p ->
+                                DropdownMenuItem(
+                                    text = { Text(p) },
+                                    onClick = {
+                                        priority = p
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        if (title.isNotBlank() && desc.isNotBlank()) {
+                            scope.launch {
+                                Repo.add(Task(0, title, desc, priority))
+                                onTasksUpdated(Repo.tasks())
+                                onNavigate("tasks")
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    colors = ButtonDefaults.buttonColors(blue)
+                ) {
+                    Text("SAVE TASK", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = { onNavigate("tasks") },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray)
+                ) {
+                    Text("CANCEL", color = Color.Gray, fontWeight = FontWeight.Bold)
+                }
             }
         }
-        Button(onClick = {
-            if (title.isNotBlank() && desc.isNotBlank()) {
-                scope.launch { Repo.add(Task(0, title, desc, priority)); onTasksUpdated(Repo.tasks()); onNavigate("tasks") }
+    }
+}
+
+@Composable
+internal fun ForgotPasswordScreen(
+    blue: Color,
+    scope: CoroutineScope,
+    onNavigate: (String) -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    Box(Modifier.fillMaxSize(), Alignment.Center) {
+        Card(Modifier.fillMaxWidth().padding(24.dp), RoundedCornerShape(18.dp)) {
+            Column(Modifier.padding(24.dp), Arrangement.spacedBy(12.dp)) {
+                Text("Reset Password", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text("Enter your email and a new password to reset your account access.", fontSize = 14.sp, color = Color.Gray)
+                
+                OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("Email Address") })
+                OutlinedTextField(newPassword, { newPassword = it }, Modifier.fillMaxWidth(), label = { Text("New Password") }, visualTransformation = PasswordVisualTransformation())
+                OutlinedTextField(confirmPassword, { confirmPassword = it }, Modifier.fillMaxWidth(), label = { Text("Confirm New Password") }, visualTransformation = PasswordVisualTransformation())
+                
+                if (error.isNotEmpty()) Text(error, color = Color.Red, fontSize = 12.sp)
+                if (message.isNotEmpty()) Text(message, color = Color(0xFF388E3C), fontSize = 12.sp)
+                
+                Button(onClick = {
+                    if (newPassword != confirmPassword) { error = "Passwords mismatch"; return@Button }
+                    if (newPassword.length < 6) { error = "Password too short"; return@Button }
+                    isLoading = true
+                    error = ""
+                    message = ""
+                    scope.launch {
+                        if (Repo.reset(email, newPassword)) {
+                            message = "Password updated successfully!"
+                            kotlinx.coroutines.delay(1500)
+                            onNavigate("login")
+                        } else {
+                            error = "No account found with this email."
+                        }
+                        isLoading = false
+                    }
+                }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(blue)) { 
+                    Text(if (isLoading) "Processing..." else "Reset Password") 
+                }
+                
+                TextButton(onClick = { onNavigate("login") }, Modifier.align(Alignment.CenterHorizontally)) { 
+                    Text("Back to Login") 
+                }
             }
-        }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(blue)) { Text("Save Task", color = Color.White) }
-        OutlinedButton(onClick = { onNavigate("tasks") }, Modifier.fillMaxWidth()) { Text("Cancel") }
+        }
     }
 }
 
@@ -139,6 +289,7 @@ internal fun AuthScreen(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -148,7 +299,20 @@ internal fun AuthScreen(
                 if (screen == "login") {
                     Text("Welcome back", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                     OutlinedTextField(username, { username = it }, Modifier.fillMaxWidth(), label = { Text("Username") })
-                    OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("Password") }, visualTransformation = PasswordVisualTransformation())
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Password") },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        }
+                    )
                     if (error.isNotEmpty()) Text(error, color = Color.Red, fontSize = 12.sp)
                     Button(onClick = {
                         isLoading = true
@@ -165,14 +329,48 @@ internal fun AuthScreen(
                             isLoading = false
                         }
                     }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(blue)) { Text(if (isLoading) "Loading..." else "Login") }
+                    
+                    TextButton(
+                        onClick = { onNavigate("forgotPassword"); error = "" },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) { 
+                        Text("Forgot Password?", color = blue.copy(alpha = 0.7f), fontSize = 14.sp)
+                    }
+
                     TextButton(onClick = { onNavigate("register"); error = "" }, Modifier.align(Alignment.CenterHorizontally)) { Text("New user? Register") }
                 } else {
                     Text("Create account", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                     OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Full Name") })
                     OutlinedTextField(username, { username = it }, Modifier.fillMaxWidth(), label = { Text("Username") })
                     OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("Email") })
-                    OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("Password") }, visualTransformation = PasswordVisualTransformation())
-                    OutlinedTextField(confirmPassword, { confirmPassword = it }, Modifier.fillMaxWidth(), label = { Text("Confirm Password") }, visualTransformation = PasswordVisualTransformation())
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Password") },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        }
+                    )
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Confirm Password") },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        }
+                    )
                     if (error.isNotEmpty()) Text(error, color = Color.Red, fontSize = 12.sp)
                     Button(onClick = {
                         if (password != confirmPassword) { error = "Passwords mismatch"; return@Button }

@@ -8,6 +8,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
@@ -95,7 +96,17 @@ class BackendApi {
     } catch (e: Exception) { false }
 
     private fun io.ktor.client.request.HttpRequestBuilder.auth(token: String) { header("Authorization", "Bearer $token") }
-    private suspend fun io.ktor.client.statement.HttpResponse.bodyOrMessage(): String = try { body<MessageBody>().message } catch (e: Exception) { "Error $status" }
+    
+    private suspend fun io.ktor.client.statement.HttpResponse.bodyOrMessage(): String = try {
+        val text = bodyAsText()
+        if (text.contains("\"message\"")) {
+            Json { ignoreUnknownKeys = true }.decodeFromString<MessageBody>(text).message
+        } else {
+            text.ifBlank { "Error $status" }
+        }
+    } catch (e: Exception) {
+        "Error $status"
+    }
 }
 
 sealed class AuthResponse {
