@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,7 +42,7 @@ internal fun TaskListScreen(
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            HeaderSection(user, items.size, blue)
+            HeaderSection(user, items.size, blue) { onNavigate("login") }
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -55,12 +57,17 @@ internal fun TaskListScreen(
 }
 
 @Composable
-private fun HeaderSection(user: User?, count: Int, blue: Color) {
+private fun HeaderSection(user: User?, count: Int, blue: Color, onLogout: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(blue).padding(24.dp)) {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-            Column {
-                Text("${user?.name ?: "User"}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text("03.09.2026", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onLogout, modifier = Modifier.padding(end = 8.dp)) {
+                    Icon(Icons.Default.ArrowBack, "Back to Login", tint = Color.White)
+                }
+                Column {
+                    Text("${user?.name ?: "User"}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text("03.09.2026", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                }
             }
             Card(colors = CardDefaults.cardColors(Color.White), shape = RoundedCornerShape(4.dp), modifier = Modifier.size(70.dp, 75.dp)) {
                 Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {

@@ -21,8 +21,23 @@ fun App() {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF5F5F5)) {
             when (screen) {
-                "tasks" -> TaskListScreen(user, items, blue, scope, { screen = it }, { items = it; storage.saveTasks(Json.encodeToString(it)) })
-                "addTask" -> AddTaskScreen(blue, scope, { screen = it }, { items = it; storage.saveTasks(Json.encodeToString(it)) })
+                "tasks" -> {
+                    BackHandler { screen = "login" }
+                    TaskListScreen(user, items, blue, scope, { screen = it }, { items = it; storage.saveTasks(Json.encodeToString(it)) })
+                }
+                "addTask" -> {
+                    BackHandler { screen = "tasks" }
+                    AddTaskScreen(blue, scope, { screen = it }, { items = it; storage.saveTasks(Json.encodeToString(it)) })
+                }
+                "register" -> {
+                    BackHandler { screen = "login" }
+                    AuthScreen(screen, blue, scope, storage, { screen = it }, { u, tasks ->
+                        user = u
+                        items = tasks
+                        storage.saveTasks(Json.encodeToString(tasks))
+                        screen = "tasks"
+                    })
+                }
                 else -> AuthScreen(screen, blue, scope, storage, { screen = it }, { u, tasks ->
                     user = u
                     items = tasks
