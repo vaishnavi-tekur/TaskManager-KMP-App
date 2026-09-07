@@ -1,21 +1,13 @@
 package com.example.taskmanagerkmpapp
-
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
-import io.ktor.server.application.Application
-import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.call
-import io.ktor.server.application.install
+import io.ktor.server.application.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
-import io.ktor.server.routing.delete
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import io.ktor.server.routing.put
-import io.ktor.server.routing.routing
+import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -30,56 +22,18 @@ import java.util.UUID
 
 fun main() {
     val port = System.getenv("PORT")?.toInt() ?: 8080
-    embeddedServer(Netty, port = port, host = "0.0.0.0", module = Application::module).start(wait = true)
+    embeddedServer(Netty, port = port, host = "0.0.0.0") {
+        install(ContentNegotiation) { json() }
+        val database = Database(); val sessions = mutableMapOf<String, Long>()
+        routing {
+            post("/register") { val r = call.receive<RegisterRequest>(); if (r.password.length < 6) return@post call.respond(HttpStatusCode.BadRequest, MessageResponse("Short pass")); val u = database.register(r) ?: return@post call.respond(HttpStatusCode.Conflict, MessageResponse("Exists")); call.respond(HttpStatusCode.Created, u) }
+            post("/login") { val r = call.receive<LoginRequest>(); val u = database.authenticate(r.username, r.password) ?: return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid")); val t = UUID.randomUUID().toString(); sessions[t] = u.id; call.respond(AuthResponse(t, u)) }
+            post("/forgot-password") { val r = call.receive<ResetPasswordRequest>(); if (!database.resetPassword(r.email, r.newPassword)) call.respond(HttpStatusCode.NotFound, MessageResponse("No account")) else call.respond(MessageResponse("Updated")) }
+            get("/tasks") { val id = call.uid(sessions) ?: return@get call.respond(HttpStatusCode.Unauthorized); call.respond(database.tasks(id)) }
+            post("/tasks") { val id = call.uid(sessions) ?: return@post call.respond(HttpStatusCode.Unauthorized); call.respond(HttpStatusCode.Created, database.addTask(id, call.receive()) ?: MessageResponse("Error")) }
+            put("/tasks/{id}") { val id = call.uid(sessions) ?: return@put call.respond(HttpStatusCode.Unauthorized); val tid = call.parameters["id"]?.toLongOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest); val c = call.receive<Map<String, Boolean>>()["completed"] ?: false; if (!database.updateTask(id, tid, c)) call.respond(HttpStatusCode.NotFound) else call.respond(MessageResponse("Updated")) }
+            delete("/tasks/{id}") { val id = call.uid(sessions) ?: return@delete call.respond(HttpStatusCode.Unauthorized); val tid = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest); if (!database.deleteTask(id, tid)) call.respond(HttpStatusCode.NotFound) else call.respond(MessageResponse("Deleted")) }
+        }
+    }.start(wait = true)
 }
-
-fun Application.module() {
-    install(ContentNegotiation) { json() }
-    val database = Database()
-    val sessions = mutableMapOf<String, Long>()
-    routing {
-        post("/register") {
-            val request = call.receive<RegisterRequest>()
-            if (request.password.length < 6) return@post call.respond(HttpStatusCode.BadRequest, MessageResponse("Password must be at least 6 characters"))
-            val user = database.register(request) ?: return@post call.respond(HttpStatusCode.Conflict, MessageResponse("Username or email already exists"))
-            call.respond(HttpStatusCode.Created, user)
-        }
-        post("/login") {
-            val request = call.receive<LoginRequest>()
-            val user = database.authenticate(request.username, request.password) ?: return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid username or password"))
-            val token = UUID.randomUUID().toString()
-            sessions[token] = user.id
-            call.respond(AuthResponse(token, user))
-        }
-        post("/forgot-password") {
-            val request = call.receive<ResetPasswordRequest>()
-            val updated = database.resetPassword(request.email, request.newPassword)
-            if (!updated) call.respond(HttpStatusCode.NotFound, MessageResponse("No account found for this email"))
-            else call.respond(MessageResponse("Password updated"))
-        }
-        get("/tasks") {
-            val userId = call.userId(sessions) ?: return@get call.respond(HttpStatusCode.Unauthorized)
-            call.respond(database.tasks(userId))
-        }
-        post("/tasks") {
-            val userId = call.userId(sessions) ?: return@post call.respond(HttpStatusCode.Unauthorized)
-            val task = database.addTask(userId, call.receive())
-            call.respond(HttpStatusCode.Created, task ?: MessageResponse("Unable to create task"))
-        }
-        put("/tasks/{id}") {
-            val userId = call.userId(sessions) ?: return@put call.respond(HttpStatusCode.Unauthorized)
-            val id = call.parameters["id"]?.toLongOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest)
-            val completed = call.receive<Map<String, Boolean>>() ["completed"] ?: false
-            if (!database.updateTask(userId, id, completed)) call.respond(HttpStatusCode.NotFound)
-            else call.respond(MessageResponse("Task updated"))
-        }
-        delete("/tasks/{id}") {
-            val userId = call.userId(sessions) ?: return@delete call.respond(HttpStatusCode.Unauthorized)
-            val id = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest)
-            if (!database.deleteTask(userId, id)) call.respond(HttpStatusCode.NotFound)
-            else call.respond(MessageResponse("Task deleted"))
-        }
-    }
-}
-
-private fun ApplicationCall.userId(sessions: Map<String, Long>) = request.headers["Authorization"]?.removePrefix("Bearer ")?.let(sessions::get)
+private fun ApplicationCall.uid(s: Map<String, Long>) = request.headers["Authorization"]?.removePrefix("Bearer ")?.let(s::get)
