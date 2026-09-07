@@ -16,15 +16,26 @@ import kotlinx.coroutines.*
 
 @Composable
 internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
+    LaunchedEffect(Unit) {
+        // This code runs automatically as soon as the screen is displayed
+        val latestTasks = Repo.tasks()
+        onTasksUpdated(latestTasks)
+    }
+    fun logout() = onNavigate("login")
     Scaffold(floatingActionButton = { FloatingActionButton(onClick = { onNavigate("addTask") }, containerColor = Color(0xFFFF4081), contentColor = Color.White, shape = RoundedCornerShape(50)) { Icon(Icons.Default.Add, null) } }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             Column(Modifier.fillMaxWidth().background(blue).padding(24.dp)) {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton({ onNavigate("login") }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
+                        IconButton({ logout() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
                         Column {
                             Text("${user?.name ?: "User"}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                            Text("03.09.2026", color = Color.White.copy(0.7f), fontSize = 14.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("03.09.2026", color = Color.White.copy(0.7f), fontSize = 14.sp)
+                                TextButton({ scope.launch { if(Repo.deleteAccount()) logout() } }) {
+                                    Text("Delete Account", color = Color(0xFFEF9A9A), fontSize = 12.sp)
+                                }
+                            }
                         }
                     }
                     Card(colors = CardDefaults.cardColors(Color.White), shape = RoundedCornerShape(4.dp), modifier = Modifier.size(70.dp, 75.dp)) {
@@ -90,6 +101,13 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 OutlinedTextField(p, { p = it }, Modifier.fillMaxWidth(), label = { Text("Password") }, visualTransformation = if (vis) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton({ vis = !vis }) { Icon(if (vis) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) } })
                 if (screen != "login") OutlinedTextField(cp, { cp = it }, Modifier.fillMaxWidth(), label = { Text("Confirm Password") }, visualTransformation = if (vis) VisualTransformation.None else PasswordVisualTransformation())
                 if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp)
+                // Change the label so users know they can use their email
+                OutlinedTextField(
+                    value = u,
+                    onValueChange = { u = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Username or Bhrish Email") }
+                )
                 Button({
                     if (screen != "login" && p != cp) { err = "Passwords mismatch"; return@Button }
                     load = true; scope.launch {

@@ -70,8 +70,11 @@ class BackendApi {
     suspend fun tasks(token: String): List<ApiTask> = try { 
         client.get("${backendUrl()}/tasks") { 
             auth(token) 
-        }.body<List<ApiTask>>() 
-    } catch (e: Exception) { emptyList() }
+        }.body<List<ApiTask>>()
+    } catch (e: Exception) {
+        println("NETWORK ERROR: ${e.message}") // Add this line
+        emptyList()
+    }
 
     suspend fun add(token: String, body: TaskBody): ApiTask? = try { 
         client.post("${backendUrl()}/tasks") { 
@@ -93,6 +96,10 @@ class BackendApi {
         client.delete("${backendUrl()}/tasks/$id") { 
             auth(token) 
         }.status.value in 200..299 
+    } catch (e: Exception) { false }
+
+    suspend fun deleteAccount(token: String): Boolean = try {
+        client.delete("${backendUrl()}/delete-account") { auth(token) }.status == HttpStatusCode.OK
     } catch (e: Exception) { false }
 
     private fun io.ktor.client.request.HttpRequestBuilder.auth(token: String) { header("Authorization", "Bearer $token") }

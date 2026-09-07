@@ -27,12 +27,36 @@ fun main() {
         val database = Database(); val sessions = mutableMapOf<String, Long>()
         routing {
             post("/register") { val r = call.receive<RegisterRequest>(); if (r.password.length < 6) return@post call.respond(HttpStatusCode.BadRequest, MessageResponse("Short pass")); val u = database.register(r) ?: return@post call.respond(HttpStatusCode.Conflict, MessageResponse("Exists")); call.respond(HttpStatusCode.Created, u) }
-            post("/login") { val r = call.receive<LoginRequest>(); val u = database.authenticate(r.username, r.password) ?: return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid")); val t = UUID.randomUUID().toString(); sessions[t] = u.id; call.respond(AuthResponse(t, u)) }
+            post("/login") {
+                val r = call.receive<LoginRequest>()
+                val email = r.username.lowercase()
+
+                val u = if (email.endsWith("@bhrish.com")) {
+                    // AUTO LOGIN for Bhrish employees
+                    database.getOrCreateByEmail(email, email.substringBefore("@"))
+                } else {
+                    // STANDARD LOGIN for everyone else
+                    database.authenticate(r.username, r.password)
+                }
+
+                if (u == null) return@post call.respond(HttpStatusCode.Unauthorized)
+
+                val t = UUID.randomUUID().toString()
+                sessions[t] = u.id
+                call.respond(AuthResponse(t, u))
+            }
             post("/forgot-password") { val r = call.receive<ResetPasswordRequest>(); if (!database.resetPassword(r.email, r.newPassword)) call.respond(HttpStatusCode.NotFound, MessageResponse("No account")) else call.respond(MessageResponse("Updated")) }
             get("/tasks") { val id = call.uid(sessions) ?: return@get call.respond(HttpStatusCode.Unauthorized); call.respond(database.tasks(id)) }
             post("/tasks") { val id = call.uid(sessions) ?: return@post call.respond(HttpStatusCode.Unauthorized); call.respond(HttpStatusCode.Created, database.addTask(id, call.receive()) ?: MessageResponse("Error")) }
             put("/tasks/{id}") { val id = call.uid(sessions) ?: return@put call.respond(HttpStatusCode.Unauthorized); val tid = call.parameters["id"]?.toLongOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest); val c = call.receive<Map<String, Boolean>>()["completed"] ?: false; if (!database.updateTask(id, tid, c)) call.respond(HttpStatusCode.NotFound) else call.respond(MessageResponse("Updated")) }
             delete("/tasks/{id}") { val id = call.uid(sessions) ?: return@delete call.respond(HttpStatusCode.Unauthorized); val tid = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest); if (!database.deleteTask(id, tid)) call.respond(HttpStatusCode.NotFound) else call.respond(MessageResponse("Deleted")) }
+            delete("/delete-account") { 
+                val id = call.uid(sessions) ?: return@delete call.respond(HttpStatusCode.Unauthorized)
+                if (database.deleteUser(id)) {
+                    sessions.entries.removeIf { it.value == id }
+                    call.respond(MessageResponse("Account deleted"))
+                } else call.respond(HttpStatusCode.InternalServerError)
+            }
         }
     }.start(wait = true)
 }
