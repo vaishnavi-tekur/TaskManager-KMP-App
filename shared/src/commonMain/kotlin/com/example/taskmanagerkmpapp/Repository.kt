@@ -17,4 +17,5 @@ internal object Repo {
     suspend fun add(task:Task) = api.add(token,TaskBody(task.title,task.description,task.priority))
     suspend fun complete(id:Int,done:Boolean) = api.complete(token,id.toLong(),done)
     suspend fun delete(id:Int) = api.delete(token,id.toLong())
+    suspend fun deleteAccount() = api.deleteAccount(token)
 }

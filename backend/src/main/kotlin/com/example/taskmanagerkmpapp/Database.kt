@@ -15,6 +15,21 @@ class Database(private val file: String = "data/taskmanager.db") {
     fun addTask(uid: Long, t: TaskRequest) = conn.prepareStatement("INSERT INTO tasks(user_id,title,description,priority) VALUES(?,?,?,?)", arrayOf("id")).use { s -> s.setLong(1,uid); s.setString(2,t.title); s.setString(3,t.description); s.setString(4,t.priority); s.executeUpdate(); s.generatedKeys.use { if (it.next()) Task(it.getLong(1),t.title,t.description,t.priority,false) else null } }
     fun updateTask(uid: Long, id: Long, c: Boolean) = conn.prepareStatement("UPDATE tasks SET is_completed=? WHERE id=? AND user_id=?").use { s -> s.setInt(1,if(c) 1 else 0); s.setLong(2,id); s.setLong(3,uid); s.executeUpdate()==1 }
     fun deleteTask(uid: Long, id: Long) = conn.prepareStatement("DELETE FROM tasks WHERE id=? AND user_id=?").use { s -> s.setLong(1,id); s.setLong(2,uid); s.executeUpdate()==1 }
+    fun deleteUser(uid: Long) = conn.prepareStatement("DELETE FROM users WHERE id=?").use { s -> s.setLong(1,uid); s.executeUpdate()==1 }
+    fun getOrCreateByEmail(email: String, name: String): User? {
+        val existing = findByEmail(email)
+        if (existing != null) return existing
+
+        // Create new user automatically if they have the right domain
+        val username = email.substringBefore("@")
+        return register(RegisterRequest(name, username, email, "bhrish_auto_pass"))
+    }
+
+    private fun findByEmail(email: String): User? =
+        conn.prepareStatement("SELECT * FROM users WHERE email=?").use { s ->
+            s.setString(1, email.lowercase())
+            s.executeQuery().use { if (it.next()) it.toU() else null }
+        }
     private fun find(u: String) = conn.prepareStatement("SELECT * FROM users WHERE username=?").use { s -> s.setString(1,u); s.executeQuery().use { if (it.next()) it.toU() else null } }
     private fun ResultSet.toU() = User(getLong("id"),getString("name"),getString("username"),getString("email"))
     private fun ResultSet.toT() = Task(getLong("id"),getString("title"),getString("description"),getString("priority"),getInt("is_completed")==1)
