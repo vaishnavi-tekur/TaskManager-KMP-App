@@ -104,6 +104,7 @@ internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (Stri
 internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, storage: SessionStorage, onNavigate: (String) -> Unit, onLoginSuccess: (User, List<Task>) -> Unit) {
     var u by remember { mutableStateOf("") }; var p by remember { mutableStateOf("") }; var n by remember { mutableStateOf("") }
     var e by remember { mutableStateOf("") }; var cp by remember { mutableStateOf("") }; var vis by remember { mutableStateOf(false) }
+    var vis2 by remember { mutableStateOf(false)}
     var err by remember { mutableStateOf("") }; var load by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(Color(0xFFF5F5F5)), Alignment.Center) {
@@ -146,8 +147,16 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                         value = cp,
                         onValueChange = { cp = it },
                         modifier = Modifier.fillMaxWidth(),
-
+                        placeholder = { Text("Confirm your password") },
+                        // Use the new 'vis2' variable here
+                        visualTransformation = if (vis2) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton({ vis2 = !vis2 }) {
+                                Icon(if (vis2) Icons.Default.Visibility else Icons.Default.VisibilityOff, null)
+                            }
+                        }
                     )
+                }
                 }
                 if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center)
 
@@ -221,7 +230,7 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                                         } else err = (res as AuthResponse.Error).message
                                     }
                                 } else if (email != null) {
-                                    err = "Only @bhrish.com emails allowed"
+                                    err = "Please register first to access the application"
                                 }
                             }
                         },
@@ -245,7 +254,7 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
             }
         }
     }
-}
+
 
 @Composable
 internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit) {
