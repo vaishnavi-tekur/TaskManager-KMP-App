@@ -4,4 +4,10 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 
 actual fun getBackendEngine(): HttpClientEngine = OkHttp.create()
-actual fun backendUrl(): String = "http://192.168.1.14:8080"
+
+private var internalBackendUrl: String = ""
+fun initializeBackendUrl(url: String) {
+    internalBackendUrl = url
+}
+
+actual fun backendUrl(): String = internalBackendUrl.ifEmpty { "http://localhost:8080" }

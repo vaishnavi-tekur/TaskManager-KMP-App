@@ -1,4 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+val envFile = project.rootProject.file(".env")
+val env = Properties()
+if (envFile.exists()) {
+    envFile.inputStream().use { env.load(it) }
+}
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -29,6 +36,9 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+        
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${env.getProperty("GOOGLE_CLIENT_ID") ?: ""}\"")
+        buildConfigField("String", "BACKEND_URL", "\"${env.getProperty("BACKEND_URL") ?: ""}\"")
     }
     packaging {
         resources {
@@ -50,5 +60,6 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }

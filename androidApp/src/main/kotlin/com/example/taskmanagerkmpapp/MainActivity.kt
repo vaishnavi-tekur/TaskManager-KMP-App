@@ -12,6 +12,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         initializeSessionStorage(this)
+        initializePlatform(this)
+        initializeGoogleLogin(BuildConfig.GOOGLE_CLIENT_ID)
+        initializeBackendUrl(BuildConfig.BACKEND_URL)
 
         setContent {
             App()
