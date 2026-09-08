@@ -104,8 +104,11 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                     Spacer(Modifier.height(8.dp))
                 }
 
-                Text("Email", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                OutlinedTextField(u, { u = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your email") })
+                Text("Username", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                OutlinedTextField(u, { u = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your username") })
+
+
+
 
                 Spacer(Modifier.height(8.dp))
                 Text("Password", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -130,7 +133,7 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 Button({
                     if (screen != "login" && p != cp) { err = "Passwords mismatch"; return@Button }
                     load = true; scope.launch {
-                    val res = if (screen == "login") Repo.login(u, p, isGoogle = false) else Repo.register(n, u, u, p)
+                    val res = if (screen == "login") Repo.login(u, p, isGoogle = false) else Repo.register(n, u, e, p)
                     if (res is AuthResponse.Success) {
                         storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
                         Repo.token = res.auth.token; onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
