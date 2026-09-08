@@ -29,7 +29,10 @@ expect fun backendUrl(): String
 @Serializable data class TaskBody(val title: String, val description: String, val priority: String = "Medium")
 @Serializable data class CompleteBody(val completed: Boolean)
 @Serializable data class MessageBody(val message: String)
-
+sealed class ResetResponse {
+    data object Success : ResetResponse()
+    data class Error(val message: String) : ResetResponse()
+}
 class BackendApi {
     private val client = HttpClient(getBackendEngine()) {
         install(ContentNegotiation) {
@@ -60,12 +63,20 @@ class BackendApi {
         } else AuthResponse.Error(resp.bodyOrMessage())
     } catch (e: Exception) { AuthResponse.Error("Network error: ${e.message}") }
 
-    suspend fun reset(body: ResetBody): Boolean = try { 
-        client.post("${backendUrl()}/forgot-password") { 
+    suspend fun reset(body: ResetBody): ResetResponse = try {
+        val resp = client.post("${backendUrl()}/forgot-password") {
             contentType(ContentType.Application.Json)
-            setBody(body) 
-        }.status == HttpStatusCode.OK 
-    } catch (e: Exception) { false }
+            setBody(body)
+        }
+        if (resp.status == HttpStatusCode.OK) {
+            ResetResponse.Success
+        } else {
+            // Use the existing bodyOrMessage() helper to get the "user email is not registered" string
+            ResetResponse.Error(resp.bodyOrMessage())
+        }
+    } catch (e: Exception) {
+        ResetResponse.Error("Network error: ${e.message}")
+    }
 
     suspend fun tasks(token: String): List<ApiTask> = try { 
         client.get("${backendUrl()}/tasks") { 

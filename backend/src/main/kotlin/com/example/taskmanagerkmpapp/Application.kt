@@ -45,7 +45,15 @@ fun main() {
                 sessions[t] = u.id
                 call.respond(AuthResponse(t, u))
             }
-            post("/forgot-password") { val r = call.receive<ResetPasswordRequest>(); if (!database.resetPassword(r.email, r.newPassword)) call.respond(HttpStatusCode.NotFound, MessageResponse("No account")) else call.respond(MessageResponse("Updated")) }
+            post("/forgot-password") {
+                val r = call.receive<ResetPasswordRequest>()
+                // If database.resetPassword returns false, it means no rows were updated (email not found)
+                if (!database.resetPassword(r.email, r.newPassword)) {
+                    call.respond(HttpStatusCode.NotFound, MessageResponse("user email is not registered"))
+                } else {
+                    call.respond(MessageResponse("Updated"))
+                }
+            }
             get("/tasks") { val id = call.uid(sessions) ?: return@get call.respond(HttpStatusCode.Unauthorized); call.respond(database.tasks(id)) }
             post("/tasks") { val id = call.uid(sessions) ?: return@post call.respond(HttpStatusCode.Unauthorized); call.respond(HttpStatusCode.Created, database.addTask(id, call.receive()) ?: MessageResponse("Error")) }
             put("/tasks/{id}") { val id = call.uid(sessions) ?: return@put call.respond(HttpStatusCode.Unauthorized); val tid = call.parameters["id"]?.toLongOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest); val c = call.receive<Map<String, Boolean>>()["completed"] ?: false; if (!database.updateTask(id, tid, c)) call.respond(HttpStatusCode.NotFound) else call.respond(MessageResponse("Updated")) }

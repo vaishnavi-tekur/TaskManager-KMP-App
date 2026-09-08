@@ -128,26 +128,65 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
 
 @Composable
 internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit) {
-    var e by remember { mutableStateOf("") }; var np by remember { mutableStateOf("") }; var cp by remember { mutableStateOf("") }
-    var msg by remember { mutableStateOf("") }; var err by remember { mutableStateOf("") }; var load by remember { mutableStateOf(false) }
+    var e by remember { mutableStateOf("") };
+    var np by remember { mutableStateOf("") };
+    var cp by remember { mutableStateOf("") }
+    var msg by remember { mutableStateOf("") };
+    var err by remember { mutableStateOf("") };
+    var load by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Card(Modifier.fillMaxWidth().padding(24.dp), RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(24.dp), Arrangement.spacedBy(12.dp)) {
                 Text("Reset Password", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                OutlinedTextField(e, { e = it }, Modifier.fillMaxWidth(), label = { Text("Email Address") })
-                OutlinedTextField(np, { np = it }, Modifier.fillMaxWidth(), label = { Text("New Password") }, visualTransformation = PasswordVisualTransformation())
-                OutlinedTextField(cp, { cp = it }, Modifier.fillMaxWidth(), label = { Text("Confirm New Password") }, visualTransformation = PasswordVisualTransformation())
+                OutlinedTextField(
+                    e,
+                    { e = it },
+                    Modifier.fillMaxWidth(),
+                    label = { Text("Email Address") })
+                OutlinedTextField(
+                    np,
+                    { np = it },
+                    Modifier.fillMaxWidth(),
+                    label = { Text("New Password") },
+                    visualTransformation = PasswordVisualTransformation()
+                )
+                OutlinedTextField(
+                    cp,
+                    { cp = it },
+                    Modifier.fillMaxWidth(),
+                    label = { Text("Confirm New Password") },
+                    visualTransformation = PasswordVisualTransformation()
+                )
                 if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp)
                 if (msg.isNotEmpty()) Text(msg, color = Color.Green, fontSize = 12.sp)
                 Button({
-                    if (np != cp) { err = "Passwords mismatch"; return@Button }
-                    load = true; scope.launch {
-                        if (Repo.reset(e, np)) { msg = "Success!"; delay(1500); onNavigate("login") } else err = "Failed"
+                    if (np != cp) {
+                        err = "Passwords mismatch"
+                        return@Button
+                    }
+                    load = true
+                    scope.launch {
+                        val res = Repo.reset(e, np)
+                        when (res) {
+                            is ResetResponse.Success -> {
+                                msg = "Password reset successfully!"
+                                delay(1500)
+                                onNavigate("login")
+                            }
+
+                            is ResetResponse.Error -> {
+                                // This will now display "user email is not registered" if returned by backend
+                                err = res.message
+                                msg = ""
+                            }
+                        }
                         load = false
                     }
-                }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(blue)) { Text(if (load) "Processing..." else "Reset Password") }
-                TextButton({ onNavigate("login") }, Modifier.align(Alignment.CenterHorizontally)) { Text("Back to Login") }
+                }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(blue)) {
+                    Text(if (load) "Processing..." else "Reset Password")
+                }
             }
         }
+
     }
 }

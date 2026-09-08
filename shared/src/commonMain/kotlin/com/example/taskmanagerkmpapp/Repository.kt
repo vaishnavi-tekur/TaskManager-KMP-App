@@ -12,7 +12,7 @@ internal object Repo {
     var token = ""
     suspend fun login(u:String,p:String): AuthResponse = api.login(u,p)
     suspend fun register(n:String,u:String,e:String,p:String): AuthResponse = api.register(RegisterBody(n,u,e,p))
-    suspend fun reset(e:String,np:String) = api.reset(ResetBody(e,np))
+    suspend fun reset(e: String, np: String): ResetResponse = api.reset(ResetBody(e, np))
     suspend fun tasks(): List<Task> = api.tasks(token).map { Task(it.id.toInt(),it.title,it.description,it.priority,it.completed) }
     suspend fun add(task:Task) = api.add(token,TaskBody(task.title,task.description,task.priority))
     suspend fun complete(id:Int,done:Boolean) = api.complete(token,id.toLong(),done)
