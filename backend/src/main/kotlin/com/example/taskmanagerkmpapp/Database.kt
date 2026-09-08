@@ -9,7 +9,14 @@ class Database(private val file: String = "data/taskmanager.db") {
         DriverManager.getConnection("jdbc:sqlite:$file").also { db -> db.createStatement().use { it.executeUpdate("PRAGMA foreign_keys=ON; CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,username TEXT UNIQUE,email TEXT UNIQUE,password_hash TEXT); CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,title TEXT,description TEXT,priority TEXT,is_completed INTEGER DEFAULT 0,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)") } }
     }
     fun register(r: RegisterRequest) = conn.prepareStatement("INSERT INTO users(name,username,email,password_hash) VALUES(?,?,?,?)").use { s -> s.setString(1,r.name); s.setString(2,r.username); s.setString(3,r.email.lowercase()); s.setString(4,hash(r.password)); try { s.executeUpdate(); find(r.username) } catch (e: Exception) { null } }
-    fun authenticate(u: String, p: String) = conn.prepareStatement("SELECT * FROM users WHERE username=? AND password_hash=?").use { s -> s.setString(1,u); s.setString(2,hash(p)); s.executeQuery().use { if (it.next()) it.toU() else null } }
+    // Update this function to search both columns
+    fun authenticate(u: String, p: String) =
+        conn.prepareStatement("SELECT * FROM users WHERE (username=? OR email=?) AND password_hash=?").use { s ->
+            s.setString(1, u)
+            s.setString(2, u.lowercase()) // Check email column (case-insensitive)
+            s.setString(3, hash(p))
+            s.executeQuery().use { if (it.next()) it.toU() else null }
+        }
     fun resetPassword(e: String, p: String) = conn.prepareStatement("UPDATE users SET password_hash=? WHERE email=?").use { s -> s.setString(1,hash(p)); s.setString(2,e.lowercase()); s.executeUpdate()==1 }
     fun tasks(uid: Long) = conn.prepareStatement("SELECT * FROM tasks WHERE user_id=?").use { s -> s.setLong(1,uid); s.executeQuery().use { r -> buildList { while (r.next()) add(r.toT()) } } }
     fun addTask(uid: Long, t: TaskRequest) = conn.prepareStatement("INSERT INTO tasks(user_id,title,description,priority) VALUES(?,?,?,?)", arrayOf("id")).use { s -> s.setLong(1,uid); s.setString(2,t.title); s.setString(3,t.description); s.setString(4,t.priority); s.executeUpdate(); s.generatedKeys.use { if (it.next()) Task(it.getLong(1),t.title,t.description,t.priority,false) else null } }

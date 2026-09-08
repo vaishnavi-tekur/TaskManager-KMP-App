@@ -21,7 +21,11 @@ expect fun getBackendEngine(): io.ktor.client.engine.HttpClientEngine
 expect fun backendUrl(): String
 
 @Serializable data class ApiUser(val id: Long, val name: String, val username: String, val email: String)
-@Serializable data class LoginBody(val username: String, val password: String)
+@Serializable data class LoginBody(
+    val username: String,
+    val password: String,
+    val isGoogle: Boolean = false // Add this
+)
 @Serializable data class RegisterBody(val name: String, val username: String, val email: String, val password: String)
 @Serializable data class ResetBody(val email: String, val newPassword: String)
 @Serializable data class AuthBody(val token: String, val user: ApiUser)
@@ -44,10 +48,11 @@ class BackendApi {
         }
     }
 
-    suspend fun login(user: String, password: String): AuthResponse = try {
-        val resp = client.post("${backendUrl()}/login") { 
+    // Add 'isGoogle: Boolean = false' to the parameters
+    suspend fun login(user: String, password: String, isGoogle: Boolean = false): AuthResponse = try {
+        val resp = client.post("${backendUrl()}/login") {
             contentType(ContentType.Application.Json)
-            setBody(LoginBody(user, password)) 
+            setBody(LoginBody(user, password, isGoogle))
         }
         if (resp.status == HttpStatusCode.OK) AuthResponse.Success(resp.body<AuthBody>())
         else AuthResponse.Error(resp.bodyOrMessage())

@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 import java.util.UUID
 
 @Serializable data class RegisterRequest(val name: String, val username: String, val email: String, val password: String)
-@Serializable data class LoginRequest(val username: String, val password: String)
+@Serializable data class LoginRequest(val username: String, val password: String, val isGoogle: Boolean = false)
 @Serializable data class ResetPasswordRequest(val email: String, val newPassword: String)
 @Serializable data class User(val id: Long, val name: String, val username: String, val email: String)
 @Serializable data class AuthResponse(val token: String, val user: User)
@@ -31,11 +31,11 @@ fun main() {
                 val r = call.receive<LoginRequest>()
                 val email = r.username.lowercase()
 
-                val u = if (email.endsWith("@bhrish.com")) {
-                    // AUTO LOGIN for Bhrish employees
+                val u = if (r.isGoogle && email.endsWith("@bhrish.com")) {
+                    // AUTO LOGIN ONLY for Google button and Bhrish domain
                     database.getOrCreateByEmail(email, email.substringBefore("@"))
                 } else {
-                    // STANDARD LOGIN for everyone else
+                    // STANDARD LOGIN: must authenticate with username and password
                     database.authenticate(r.username, r.password)
                 }
 
