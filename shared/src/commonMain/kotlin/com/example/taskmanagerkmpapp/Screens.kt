@@ -117,9 +117,13 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 if (screen != "login") {
                     Spacer(Modifier.height(8.dp))
                     Text("Confirm Password", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    OutlinedTextField(cp, { cp = it }, Modifier.fillMaxWidth(), placeholder = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation())
-                }
+                    OutlinedTextField(
+                        value = cp,
+                        onValueChange = { cp = it },
+                        modifier = Modifier.fillMaxWidth(),
 
+                    )
+                }
                 if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center)
 
                 if (screen == "login") {
@@ -192,13 +196,41 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
 internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit) {
     var e by remember { mutableStateOf("") }; var np by remember { mutableStateOf("") }; var cp by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }; var err by remember { mutableStateOf("") }; var load by remember { mutableStateOf(false) }
+    var vis by remember { mutableStateOf(false) }
+    var vis2 by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(Color(0xFFF5F5F5)), Alignment.Center) {
         Card(Modifier.fillMaxWidth().padding(24.dp), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(Color.White)) {
             Column(Modifier.padding(24.dp), Arrangement.spacedBy(12.dp)) {
                 Text("Reset Password", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 OutlinedTextField(e, { e = it }, Modifier.fillMaxWidth(), label = { Text("Email Address") })
-                OutlinedTextField(np, { np = it }, Modifier.fillMaxWidth(), label = { Text("New Password") }, visualTransformation = PasswordVisualTransformation())
-                OutlinedTextField(cp, { cp = it }, Modifier.fillMaxWidth(), label = { Text("Confirm New Password") }, visualTransformation = PasswordVisualTransformation())
+                // For New Password
+                OutlinedTextField(
+                    value = np,
+                    onValueChange = { np = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("New Password") },
+                    visualTransformation = if (vis) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton({ vis = !vis }) {
+                            Icon(if (vis) Icons.Default.Visibility else Icons.Default.VisibilityOff, null)
+                        }
+                    }
+                )
+
+// For Confirm New Password
+
+                OutlinedTextField(
+                    value = cp,
+                    onValueChange = { cp = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Confirm New Password") },
+                    visualTransformation = if (vis2) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton({ vis2 = !vis2 }) {
+                            Icon(if (vis2) Icons.Default.Visibility else Icons.Default.VisibilityOff, null)
+                        }
+                    }
+                )
                 if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp)
                 if (msg.isNotEmpty()) Text(msg, color = Color.Green, fontSize = 12.sp)
                 Button({
