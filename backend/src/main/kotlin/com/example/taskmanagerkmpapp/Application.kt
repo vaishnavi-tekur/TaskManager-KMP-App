@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 import java.util.UUID
 
 @Serializable data class RegisterRequest(val name: String, val username: String, val email: String, val password: String)
-@Serializable data class LoginRequest(val username: String, val password: String)
+@Serializable data class LoginRequest(val username: String, val password: String , val isGoogle: Boolean = false)
 @Serializable data class ResetPasswordRequest(val email: String, val newPassword: String)
 @Serializable data class User(val id: Long, val name: String, val username: String, val email: String)
 @Serializable data class AuthResponse(val token: String, val user: User)
@@ -31,15 +31,22 @@ fun main() {
                 val r = call.receive<LoginRequest>()
                 val email = r.username.lowercase()
 
-                val u = if (email.endsWith("@bhrish.com")) {
-                    // AUTO LOGIN for Bhrish employees
+                // 1. Domain Restriction: Block any non-bhrish emails from accessing the app
+                if (!email.endsWith("@bhrish.com")) {
+                    return@post call.respond(HttpStatusCode.Forbidden, MessageResponse("Access restricted to @bhrish.com domain"))
+                }
+
+                val u = if (r.isGoogle) {
+                    // 2. ONLY auto-login if coming from the Google button
                     database.getOrCreateByEmail(email, email.substringBefore("@"))
                 } else {
-                    // STANDARD LOGIN for everyone else
+                    // 3. Standard Login: Requires password even for bhrish emails
                     database.authenticate(r.username, r.password)
                 }
 
-                if (u == null) return@post call.respond(HttpStatusCode.Unauthorized)
+                if (u == null) {
+                    return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid credentials"))
+                }
 
                 val t = UUID.randomUUID().toString()
                 sessions[t] = u.id

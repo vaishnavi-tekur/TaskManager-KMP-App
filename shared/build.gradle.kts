@@ -18,34 +18,29 @@ kotlin {
             isStatic = true
         }
     }
-    
+
     android {
-       namespace = "com.example.taskmanagerkmpapp.shared"
-       compileSdk = libs.versions.android.compileSdk.get().toInt()
-       minSdk = libs.versions.android.minSdk.get().toInt()
-    
-       compilerOptions {
-           jvmTarget = JvmTarget.JVM_11
-       }
-       androidResources {
-           enable = true
-       }
-       withHostTest {
-           isIncludeAndroidResources = true
-       }
-       withDeviceTestBuilder {
-           sourceSetTreeName = "test"
-       }.configure {
-           instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-       }
-    }
-    
-    sourceSets {
-        androidMain.dependencies {
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.compose.uiTooling)
-            implementation(libs.androidx.activity.compose)
+        namespace = "com.example.taskmanagerkmpapp.shared"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_11
         }
+        androidResources {
+            enable = true
+        }
+        withHostTest {
+            isIncludeAndroidResources = true
+        }
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
+    }
+
+    sourceSets {
         commonMain.dependencies {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -60,13 +55,26 @@ kotlin {
             implementation("io.ktor:ktor-client-core:3.0.0")
             implementation("io.ktor:ktor-client-content-negotiation:3.0.0")
             implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.0")
+            implementation(libs.kotlinx.datetime)
         }
+
         androidMain.dependencies {
+            implementation(libs.compose.uiToolingPreview)
+            implementation(libs.compose.uiTooling)
+            implementation(libs.androidx.activity.compose)
             implementation("io.ktor:ktor-client-okhttp:3.0.0")
+
+            // Google Login dependencies
+            implementation(libs.androidx.credentials)
+            // Change the hyphen (-) to a dot (.)
+            implementation(libs.androidx.credentials.play.services)
+            implementation(libs.googleid)
         }
+
         iosMain.dependencies {
             implementation("io.ktor:ktor-client-darwin:3.0.0")
         }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }

@@ -10,7 +10,7 @@ internal data class Task(val id:Int, val title:String, val description:String, v
 internal object Repo {
     private val api = BackendApi()
     var token = ""
-    suspend fun login(u:String,p:String): AuthResponse = api.login(u,p)
+    suspend fun login(u:String,p:String, isGoogle: Boolean = false): AuthResponse = api.login(u,p,isGoogle)
     suspend fun register(n:String,u:String,e:String,p:String): AuthResponse = api.register(RegisterBody(n,u,e,p))
     suspend fun reset(e:String,np:String) = api.reset(ResetBody(e,np))
     suspend fun tasks(): List<Task> = api.tasks(token).map { Task(it.id.toInt(),it.title,it.description,it.priority,it.completed) }

@@ -10,3 +10,4 @@ expect fun getPlatform(): Platform
 
 @Composable
 expect fun BackHandler(enabled: Boolean = true, onBack: () -> Unit)
+expect fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (String?) -> Unit)

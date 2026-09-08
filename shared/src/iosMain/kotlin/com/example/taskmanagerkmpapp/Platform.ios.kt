@@ -8,6 +8,10 @@ class IOSPlatform: Platform {
 }
 
 actual fun getPlatform(): Platform = IOSPlatform()
+actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (String?) -> Unit) {
+    // Placeholder for iOS - returns null for now
+    onResult(null)
+}
 
 @Composable
 actual fun BackHandler(enabled: Boolean, onBack: () -> Unit) {

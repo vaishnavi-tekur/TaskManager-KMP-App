@@ -12,6 +12,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         initializeSessionStorage(this)
+        initializePlatform(this)
 
         setContent {
             App()

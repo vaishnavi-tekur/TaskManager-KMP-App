@@ -15,6 +15,19 @@ fun App() {
     var user by remember { mutableStateOf<User?>(null) }
     var screen by remember { mutableStateOf("login") }
     var items by remember { mutableStateOf(emptyList<Task>()) }
+    LaunchedEffect(Unit) {
+        val token = storage.read("token")
+        val email = storage.read("email")
+        val name = storage.read("name")
+        val username = storage.read("user")
+
+        if (token.isNotEmpty() && email.endsWith("@bhrish.com")) {
+            Repo.token = token
+            user = User(name, username, email)
+            // Optionally refresh tasks here
+            screen = "tasks"
+        }
+    }
     val scope = rememberCoroutineScope()
     val blue = Color(0xFF1A237E)
 

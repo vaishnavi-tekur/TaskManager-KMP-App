@@ -30,7 +30,7 @@ class Database(private val file: String = "data/taskmanager.db") {
             s.setString(1, email.lowercase())
             s.executeQuery().use { if (it.next()) it.toU() else null }
         }
-    private fun find(u: String) = conn.prepareStatement("SELECT * FROM users WHERE username=?").use { s -> s.setString(1,u); s.executeQuery().use { if (it.next()) it.toU() else null } }
+     fun find(u: String) = conn.prepareStatement("SELECT * FROM users WHERE username=?").use { s -> s.setString(1,u); s.executeQuery().use { if (it.next()) it.toU() else null } }
     private fun ResultSet.toU() = User(getLong("id"),getString("name"),getString("username"),getString("email"))
     private fun ResultSet.toT() = Task(getLong("id"),getString("title"),getString("description"),getString("priority"),getInt("is_completed")==1)
     private fun hash(v: String) = MessageDigest.getInstance("SHA-256").digest(v.toByteArray()).joinToString("") { "%02x".format(it) }
