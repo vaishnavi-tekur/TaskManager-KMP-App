@@ -29,17 +29,32 @@ fun main() {
             post("/register") { val r = call.receive<RegisterRequest>(); if (r.password.length < 6) return@post call.respond(HttpStatusCode.BadRequest, MessageResponse("Short pass")); val u = database.register(r) ?: return@post call.respond(HttpStatusCode.Conflict, MessageResponse("Exists")); call.respond(HttpStatusCode.Created, u) }
             post("/login") {
                 val r = call.receive<LoginRequest>()
-                val email = r.username.lowercase()
+                val input = r.username.lowercase()
 
-                val u = if (r.isGoogle && email.endsWith("@bhrish.com")) {
-                    // AUTO LOGIN ONLY for Google button and Bhrish domain
-                    database.getOrCreateByEmail(email, email.substringBefore("@"))
+                val u = if (r.isGoogle) {
+                    // 1. Google Login specific logic
+                    if (!input.endsWith("@bhrish.com")) {
+                        return@post call.respond(HttpStatusCode.Forbidden, MessageResponse("Only @bhrish.com emails allowed"))
+                    }
+                    database.getOrCreateByEmail(input, input.substringBefore("@"))
                 } else {
-                    // STANDARD LOGIN: must authenticate with username and password
-                    database.authenticate(r.username, r.password)
+                    // 2. Standard Login: Check if user exists first
+                    val existingUser = database.find(r.username)
+                    if (existingUser == null) {
+                        return@post call.respond(HttpStatusCode.NotFound, MessageResponse("User is not registered"))
+                    }
+
+                    // 3. Check if password is correct
+                    val authenticatedUser = database.authenticate(r.username, r.password)
+                    if (authenticatedUser == null) {
+                        return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("please enter a password"))
+                    }
+                    authenticatedUser
                 }
 
-                if (u == null) return@post call.respond(HttpStatusCode.Unauthorized)
+                if (u == null) {
+                    return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Login failed"))
+                }
 
                 val t = UUID.randomUUID().toString()
                 sessions[t] = u.id

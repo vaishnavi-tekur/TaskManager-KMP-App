@@ -18,12 +18,25 @@ import kotlinx.coroutines.*
 import org.jetbrains.compose.resources.painterResource
 import taskmanagerkmpapp.shared.generated.resources.Res
 import taskmanagerkmpapp.shared.generated.resources.ic_google
+import kotlinx.datetime.*
 
 @Composable
 internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
+    // 1. Correct Date Calculation
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    val dateString = "${now.dayOfMonth.toString().padStart(2, '0')}.${now.monthNumber.toString().padStart(2, '0')}.${now.year}"
+
     LaunchedEffect(Unit) { onTasksUpdated(Repo.tasks()) }
+
     fun logout() = onNavigate("login")
-    Scaffold(floatingActionButton = { FloatingActionButton(onClick = { onNavigate("addTask") }, containerColor = Color(0xFFFF4081), contentColor = Color.White, shape = RoundedCornerShape(50)) { Icon(Icons.Default.Add, null) } }) { padding ->
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { onNavigate("addTask") }, containerColor = Color(0xFFFF4081), contentColor = Color.White, shape = RoundedCornerShape(50)) {
+                Icon(Icons.Default.Add, null)
+            }
+        }
+    ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             Column(Modifier.fillMaxWidth().background(blue).padding(24.dp)) {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
@@ -32,8 +45,8 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
                         Column {
                             Text("${user?.name ?: "User"}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Today", color = Color.White.copy(0.7f), fontSize = 14.sp)
-                                TextButton({ scope.launch { if(Repo.deleteAccount()) logout() } }) { Text("Delete Account", color = Color(0xFFEF9A9A), fontSize = 12.sp) }
+                                // 2. Use the dateString variable
+                                Text(dateString, color = Color.White.copy(0.7f), fontSize = 14.sp)
                             }
                         }
                     }
@@ -79,7 +92,9 @@ internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (Stri
                     ExposedDropdownMenu(expanded, { expanded = false }) { listOf("Low", "Medium", "High").forEach { DropdownMenuItem(text = { Text(it) }, onClick = { priority = it; expanded = false }) } }
                 }
                 Button({ if (title.isNotBlank()) scope.launch { Repo.add(Task(0, title, desc, priority)); onTasksUpdated(Repo.tasks()); onNavigate("tasks") } }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp), colors = ButtonDefaults.buttonColors(blue)) { Text("SAVE TASK", fontWeight = FontWeight.Bold) }
-                OutlinedButton({ onNavigate("tasks") }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp)) { Text("CANCEL", color = Color.Gray) }
+                OutlinedButton({ onNavigate("tasks") }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp)) { Text("CANCEL", color = Color.
+
+                Gray) }
             }
         }
     }
@@ -106,7 +121,17 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
 
                 Text("Username", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 OutlinedTextField(u, { u = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your username") })
-
+                // Add this block for the Email field
+                if (screen != "login") {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Email", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    OutlinedTextField(
+                        value = e,
+                        onValueChange = { e = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Enter your email") }
+                    )
+                }
 
 
 
@@ -127,24 +152,54 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center)
 
                 if (screen == "login") {
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(false, {}) ; Text("Remember me", fontSize = 12.sp, color = Color.Gray) }
-                        TextButton({ onNavigate("forgotPassword") }) { Text("Forgot password?", color = blue, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    // We keep the Row with Arrangement.End to push the button to the right
+                    Row(Modifier.fillMaxWidth(), Arrangement.End, Alignment.CenterVertically) {
+                        TextButton({ onNavigate("forgotPassword") }) {
+                            Text("Forgot password?", color = blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Button({
-                    if (screen != "login" && p != cp) { err = "Passwords mismatch"; return@Button }
-                    load = true; scope.launch {
-                    val res = if (screen == "login") Repo.login(u, p, isGoogle = false) else Repo.register(n, u, e, p)
-                    if (res is AuthResponse.Success) {
-                        storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
-                        Repo.token = res.auth.token; onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
-                    } else err = (res as AuthResponse.Error).message
-                    load = false
-                }
-                }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(24.dp), colors = ButtonDefaults.buttonColors(blue)) {
+                Button(
+                    onClick = {
+                        // 1. Validation Checks
+                        if (u.isBlank()) {
+                            err = "Enter username"
+                            return@Button
+                        }
+                        if (p.isBlank()) {
+                            err = "Enter password"
+                            return@Button
+                        }
+                        if (screen != "login" && p != cp) {
+                            err = "Passwords mismatch"
+                            return@Button
+                        }
+
+                        // 2. Start Loading
+                        load = true
+                        scope.launch {
+                            // 3. ACTUAL LOGIN/REGISTER CALL (This was missing)
+                            val res = if (screen == "login") Repo.login(u, p, isGoogle = false) else Repo.register(n, u, e, p)
+
+                            if (res is AuthResponse.Success) {
+                                storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
+                                Repo.token = res.auth.token
+                                onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
+                            } else {
+                                // Show the error from backend
+                                err = (res as AuthResponse.Error).message
+                            }
+
+                            // 4. STOP LOADING (Always stop loading when finished)
+                            load = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(blue)
+                ) {
                     Text(if (load) "Loading..." else if (screen == "login") "Login" else "Register")
                 }
 

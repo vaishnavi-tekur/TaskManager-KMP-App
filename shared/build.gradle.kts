@@ -60,6 +60,8 @@ kotlin {
             implementation("io.ktor:ktor-client-core:3.0.0")
             implementation("io.ktor:ktor-client-content-negotiation:3.0.0")
             implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.0")
+            // Inside commonMain.dependencies
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
         }
         androidMain.dependencies {
             implementation("io.ktor:ktor-client-okhttp:3.0.0")
