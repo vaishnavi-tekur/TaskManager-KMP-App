@@ -191,16 +191,13 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                     OutlinedButton(
                         onClick = {
                             if (load) return@OutlinedButton
-                            println("UI: Google button clicked")
                             googleLogin(scope) { result ->
                                 val email = result as? String
-                                println("UI: googleLogin result: $email")
-                                if (email != null && email.endsWith("@bhrish.com")) {
-                                    println("UI: Domain match. Logging in $email")
+                                if (email != null) {
+                                    println("UI: Google login triggered for $email")
                                     load = true
                                     scope.launch {
                                         val res = Repo.login(email, "google_auto_login", isGoogle = true)
-                                        println("UI: Backend response: $res")
                                         if (res is AuthResponse.Success) {
                                             storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
                                             Repo.token = res.auth.token
@@ -210,11 +207,6 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                                         }
                                         load = false
                                     }
-                                } else if (email != null) {
-                                    println("UI: Domain mismatch for $email")
-                                    err = "Please register first to access the application"
-                                } else {
-                                    println("UI: Google login cancelled or failed")
                                 }
                             }
                         },
