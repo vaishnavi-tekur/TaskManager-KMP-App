@@ -22,7 +22,6 @@ import kotlinx.datetime.*
 
 @Composable
 internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
-    // 1. Correct Date Calculation
     val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     val dateString = "${now.dayOfMonth.toString().padStart(2, '0')}.${now.monthNumber.toString().padStart(2, '0')}.${now.year}"
 
@@ -45,7 +44,6 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
                         Column {
                             Text("${user?.name ?: "User"}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                // 2. Use the dateString variable
                                 Text(dateString, color = Color.White.copy(0.7f), fontSize = 14.sp)
                             }
                         }
@@ -92,9 +90,7 @@ internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (Stri
                     ExposedDropdownMenu(expanded, { expanded = false }) { listOf("Low", "Medium", "High").forEach { DropdownMenuItem(text = { Text(it) }, onClick = { priority = it; expanded = false }) } }
                 }
                 Button({ if (title.isNotBlank()) scope.launch { Repo.add(Task(0, title, desc, priority)); onTasksUpdated(Repo.tasks()); onNavigate("tasks") } }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp), colors = ButtonDefaults.buttonColors(blue)) { Text("SAVE TASK", fontWeight = FontWeight.Bold) }
-                OutlinedButton({ onNavigate("tasks") }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp)) { Text("CANCEL", color = Color.
-
-                Gray) }
+                OutlinedButton({ onNavigate("tasks") }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp)) { Text("CANCEL", color = Color.Gray) }
             }
         }
     }
@@ -122,19 +118,12 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
 
                 Text("Username", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 OutlinedTextField(u, { u = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your username") })
-                // Add this block for the Email field
+
                 if (screen != "login") {
                     Spacer(Modifier.height(8.dp))
                     Text("Email", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    OutlinedTextField(
-                        value = e,
-                        onValueChange = { e = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Enter your email") }
-                    )
+                    OutlinedTextField(e, { e = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your email") })
                 }
-
-
 
                 Spacer(Modifier.height(8.dp))
                 Text("Password", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -148,7 +137,6 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                         onValueChange = { cp = it },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Confirm your password") },
-                        // Use the new 'vis2' variable here
                         visualTransformation = if (vis2) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton({ vis2 = !vis2 }) {
@@ -157,11 +145,10 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                         }
                     )
                 }
-                }
+
                 if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center)
 
                 if (screen == "login") {
-                    // We keep the Row with Arrangement.End to push the button to the right
                     Row(Modifier.fillMaxWidth(), Arrangement.End, Alignment.CenterVertically) {
                         TextButton({ onNavigate("forgotPassword") }) {
                             Text("Forgot password?", color = blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -172,36 +159,21 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        // 1. Validation Checks
-                        if (u.isBlank()) {
-                            err = "Enter username"
-                            return@Button
-                        }
-                        if (p.isBlank()) {
-                            err = "Enter password"
-                            return@Button
-                        }
-                        if (screen != "login" && p != cp) {
-                            err = "Passwords mismatch"
-                            return@Button
-                        }
+                        if (u.isBlank()) { err = "Enter username"; return@Button }
+                        if (screen != "login" && e.isBlank()) { err = "Enter email"; return@Button }
+                        if (p.isBlank()) { err = "Enter password"; return@Button }
+                        if (screen != "login" && p != cp) { err = "Passwords mismatch"; return@Button }
 
-                        // 2. Start Loading
                         load = true
                         scope.launch {
-                            // 3. ACTUAL LOGIN/REGISTER CALL (This was missing)
                             val res = if (screen == "login") Repo.login(u, p, isGoogle = false) else Repo.register(n, u, e, p)
-
                             if (res is AuthResponse.Success) {
                                 storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
                                 Repo.token = res.auth.token
                                 onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
                             } else {
-                                // Show the error from backend
                                 err = (res as AuthResponse.Error).message
                             }
-
-                            // 4. STOP LOADING (Always stop loading when finished)
                             load = false
                         }
                     },
@@ -218,33 +190,44 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                     }
                     OutlinedButton(
                         onClick = {
+                            if (load) return@OutlinedButton
+                            println("UI: Google button clicked")
                             googleLogin(scope) { result ->
                                 val email = result as? String
+                                println("UI: googleLogin result: $email")
                                 if (email != null && email.endsWith("@bhrish.com")) {
+                                    println("UI: Domain match. Logging in $email")
+                                    load = true
                                     scope.launch {
                                         val res = Repo.login(email, "google_auto_login", isGoogle = true)
+                                        println("UI: Backend response: $res")
                                         if (res is AuthResponse.Success) {
                                             storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
                                             Repo.token = res.auth.token
                                             onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
-                                        } else err = (res as AuthResponse.Error).message
+                                        } else {
+                                            err = (res as AuthResponse.Error).message
+                                        }
+                                        load = false
                                     }
                                 } else if (email != null) {
+                                    println("UI: Domain mismatch for $email")
                                     err = "Please register first to access the application"
+                                } else {
+                                    println("UI: Google login cancelled or failed")
                                 }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(24.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.ic_google),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = Color.Unspecified
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text("Continue with Google", color = Color.Black)
+                        if (load) {
+                            Text("Connecting...", color = Color.Black)
+                        } else {
+                            Icon(painter = painterResource(Res.drawable.ic_google), contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.Unspecified)
+                            Spacer(Modifier.width(12.dp))
+                            Text("Continue with Google", color = Color.Black)
+                        }
                     }
                 }
 
@@ -254,7 +237,7 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
             }
         }
     }
-
+}
 
 @Composable
 internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit) {
@@ -267,7 +250,6 @@ internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate
             Column(Modifier.padding(24.dp), Arrangement.spacedBy(12.dp)) {
                 Text("Reset Password", color = blue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 OutlinedTextField(e, { e = it }, Modifier.fillMaxWidth(), label = { Text("Email Address") })
-                // For New Password
                 OutlinedTextField(
                     value = np,
                     onValueChange = { np = it },
@@ -280,8 +262,6 @@ internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate
                         }
                     }
                 )
-
-// For Confirm New Password
 
                 OutlinedTextField(
                     value = cp,
@@ -300,17 +280,17 @@ internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate
                 Button({
                     if (np != cp) { err = "Passwords mismatch"; return@Button }
                     load = true; scope.launch {
-                    val res = Repo.reset(e, np)
-                    when (res) {
-                        is ResetResponse.Success -> {
-                            msg = "Success!"; delay(1500); onNavigate("login")
+                        val res = Repo.reset(e, np)
+                        when (res) {
+                            is ResetResponse.Success -> {
+                                msg = "Success!"; delay(1500); onNavigate("login")
+                            }
+                            is ResetResponse.Error -> {
+                                err = res.message; msg = ""
+                            }
                         }
-                        is ResetResponse.Error -> {
-                            err = res.message; msg = ""
-                        }
+                        load = false
                     }
-                    load = false
-                }
                 }, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(blue)) { Text(if (load) "Processing..." else "Reset Password") }
                 TextButton({ onNavigate("login") }, Modifier.align(Alignment.CenterHorizontally)) { Text("Back to Login") }
             }

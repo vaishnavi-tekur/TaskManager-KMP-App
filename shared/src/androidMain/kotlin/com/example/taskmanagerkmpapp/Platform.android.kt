@@ -21,10 +21,14 @@ actual fun BackHandler(enabled: Boolean, onBack: () -> Unit) {
 private var googleClientId: String = ""
 fun initializeGoogleLogin(clientId: String) {
     googleClientId = clientId
+    println("GOOGLE LOGIN: Initialized with ID: $googleClientId")
 }
 
 actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (String?) -> Unit) {
-    val context = appContext ?: return onResult(null)
+    val context = appContext ?: run {
+        println("GOOGLE LOGIN ERROR: appContext is null")
+        return onResult(null)
+    }
     val credentialManager = CredentialManager.create(context)
 
     if (googleClientId.isEmpty()) {
@@ -32,6 +36,7 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
         return onResult(null)
     }
 
+    println("GOOGLE LOGIN: Starting request...")
     val googleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(false)
         .setAutoSelectEnabled(true)
@@ -44,15 +49,25 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
 
     scope.launch {
         try {
+            println("GOOGLE LOGIN: Awaiting credential selection...")
             val result = credentialManager.getCredential(context, request)
             val cred = result.credential
+            println("GOOGLE LOGIN: Credential received. Type: ${cred.type}")
+            
             if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(cred.data)
-                onResult(googleIdTokenCredential.id)
+                val email = googleIdTokenCredential.id
+                println("GOOGLE LOGIN SUCCESS: User selected email: $email")
+                onResult(email)
+            } else {
+                println("GOOGLE LOGIN FAILED: Unexpected credential type: ${cred.type}")
+                onResult(null)
             }
         } catch (e: Exception) {
-            println("GOOGLE LOGIN ERROR: ${e.message}")
-            e.printStackTrace()
+            println("GOOGLE LOGIN ERROR/CANCELLED: ${e.message}")
+            if (e !is androidx.credentials.exceptions.GetCredentialException) {
+                e.printStackTrace()
+            }
             onResult(null)
         }
     }

@@ -18,12 +18,48 @@ fun App() {
     val scope = rememberCoroutineScope()
     val blue = Color(0xFF1A237E)
 
+    LaunchedEffect(Unit) {
+        val token = storage.read("token")
+        if (token.isNotEmpty()) {
+            Repo.token = token
+            val name = storage.read("name")
+            val username = storage.read("user")
+            val email = storage.read("email")
+            user = User(name, username, email)
+            // Pre-load tasks from cache or network
+            val cachedTasks = storage.read("tasks_cache")
+            if (cachedTasks.isNotEmpty()) {
+                try {
+                    items = Json.decodeFromString<List<Task>>(cachedTasks)
+                } catch (e: Exception) {
+                    println("APP: Error decoding cached tasks: ${e.message}")
+                }
+            }
+            screen = "tasks"
+            // Refresh tasks in background
+            items = Repo.tasks()
+            storage.saveTasks(Json.encodeToString(items))
+        }
+    }
+
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFFF5F5F5)) {
             when (screen) {
                 "tasks" -> {
-                    BackHandler { screen = "login" }
-                    TaskListScreen(user, items, blue, scope, { screen = it }, { items = it; storage.saveTasks(Json.encodeToString(it)) })
+                    BackHandler {
+                        storage.clear()
+                        Repo.token = ""
+                        user = null
+                        screen = "login"
+                    }
+                    TaskListScreen(user, items, blue, scope, {
+                        if (it == "login") {
+                            storage.clear()
+                            Repo.token = ""
+                            user = null
+                        }
+                        screen = it
+                    }, { items = it; storage.saveTasks(Json.encodeToString(it)) })
                 }
                 "addTask" -> {
                     BackHandler { screen = "tasks" }
