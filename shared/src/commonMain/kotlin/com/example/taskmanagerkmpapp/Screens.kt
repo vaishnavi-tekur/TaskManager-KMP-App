@@ -163,6 +163,7 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                         if (screen != "login" && e.isBlank()) { err = "Enter email"; return@Button }
                         if (p.isBlank()) { err = "Enter password"; return@Button }
                         if (screen != "login" && p != cp) { err = "Passwords mismatch"; return@Button }
+                        if (screen != "login" && p.length < 6) { err = "Password is too short (minimum 6 characters)."; return@Button }
 
                         load = true
                         scope.launch {
@@ -191,12 +192,12 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                     OutlinedButton(
                         onClick = {
                             if (load) return@OutlinedButton
-                            err = "" // Clear previous errors
+                            err = ""
+                            load = true
                             googleLogin(scope) { result ->
                                 val email = result as? String
                                 if (email != null) {
                                     println("UI: Google login successful for $email")
-                                    load = true
                                     scope.launch {
                                         val res = Repo.login(email, "google_auto_login", isGoogle = true)
                                         if (res is AuthResponse.Success) {
@@ -209,7 +210,8 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                                         load = false
                                     }
                                 } else {
-                                    err = "Google Sign-In failed or was cancelled. Check your Client ID."
+                                    err = "Google Sign-In failed or was cancelled."
+                                    load = false
                                 }
                             }
                         },
@@ -274,6 +276,7 @@ internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate
                 if (msg.isNotEmpty()) Text(msg, color = Color.Green, fontSize = 12.sp)
                 Button({
                     if (np != cp) { err = "Passwords mismatch"; return@Button }
+                    if (np.length < 6) { err = "Password is too short (minimum 6 characters)."; return@Button }
                     load = true; scope.launch {
                         val res = Repo.reset(e, np)
                         when (res) {

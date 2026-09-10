@@ -26,20 +26,20 @@ fun initializeGoogleLogin(clientId: String) {
 
 actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (String?) -> Unit) {
     val context = appContext ?: run {
-        println("GOOGLE LOGIN ERROR: appContext is null")
+        println("GOOGLE LOGIN ERROR: appContext is null. Ensure initializePlatform(this) is called in MainActivity.")
         return onResult(null)
     }
     val credentialManager = CredentialManager.create(context)
 
     if (googleClientId.isEmpty()) {
-        println("GOOGLE LOGIN ERROR: Client ID not initialized")
+        println("GOOGLE LOGIN ERROR: Client ID not initialized. Check your .env and MainActivity.")
         return onResult(null)
     }
 
-    println("GOOGLE LOGIN: Starting request...")
+    println("GOOGLE LOGIN: Starting request with Client ID: $googleClientId")
     val googleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(false)
-        .setAutoSelectEnabled(true)
+        .setAutoSelectEnabled(false) // Disable auto-select to force the account picker for debugging
         .setServerClientId(googleClientId)
         .build()
 
@@ -49,7 +49,7 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
 
     scope.launch {
         try {
-            println("GOOGLE LOGIN: Awaiting credential selection...")
+            println("GOOGLE LOGIN: Awaiting credential selection UI...")
             val result = credentialManager.getCredential(context, request)
             val cred = result.credential
             println("GOOGLE LOGIN: Credential received. Type: ${cred.type}")
@@ -64,10 +64,12 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
                 onResult(null)
             }
         } catch (e: Exception) {
-            println("GOOGLE LOGIN ERROR/CANCELLED: ${e.message}")
-            if (e !is androidx.credentials.exceptions.GetCredentialException) {
-                e.printStackTrace()
+            val errorMsg = when (e) {
+                is androidx.credentials.exceptions.GetCredentialException -> "Credential Manager Error: ${e.type} - ${e.message}"
+                else -> "Google Login Error: ${e.message}"
             }
+            println("GOOGLE LOGIN FAILED: $errorMsg")
+            e.printStackTrace()
             onResult(null)
         }
     }

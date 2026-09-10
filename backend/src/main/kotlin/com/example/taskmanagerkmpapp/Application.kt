@@ -30,7 +30,7 @@ fun main() {
         routing {
             post("/register") {
                 val r = call.receive<RegisterRequest>()
-                if (r.password.length < 6) return@post call.respond(HttpStatusCode.BadRequest, MessageResponse("Short pass"))
+                if (r.password.length < 6) return@post call.respond(HttpStatusCode.BadRequest, MessageResponse("Password is too short (minimum 6 characters)."))
                 val u = database.register(r) ?: return@post call.respond(HttpStatusCode.Conflict, MessageResponse("Exists"))
                 call.respond(HttpStatusCode.Created, u)
             }
@@ -67,6 +67,15 @@ fun main() {
 
             post("/forgot-password") {
                 val r = call.receive<ResetPasswordRequest>()
+
+                // Add this validation check here
+                if (r.newPassword.length < 6) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        MessageResponse("Password is too short (minimum 6 characters).")
+                    )
+                }
+
                 if (!database.resetPassword(r.email, r.newPassword)) {
                     call.respond(HttpStatusCode.NotFound, MessageResponse("user email is not registered"))
                 } else {
