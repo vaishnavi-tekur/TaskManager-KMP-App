@@ -191,10 +191,11 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                     OutlinedButton(
                         onClick = {
                             if (load) return@OutlinedButton
+                            err = "" // Clear previous errors
                             googleLogin(scope) { result ->
                                 val email = result as? String
                                 if (email != null) {
-                                    println("UI: Google login triggered for $email")
+                                    println("UI: Google login successful for $email")
                                     load = true
                                     scope.launch {
                                         val res = Repo.login(email, "google_auto_login", isGoogle = true)
@@ -207,6 +208,8 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                                         }
                                         load = false
                                     }
+                                } else {
+                                    err = "Google Sign-In failed or was cancelled. Check your Client ID."
                                 }
                             }
                         },

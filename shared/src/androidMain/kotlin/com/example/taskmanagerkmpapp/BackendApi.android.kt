@@ -10,4 +10,4 @@ fun initializeBackendUrl(url: String) {
     internalBackendUrl = url
 }
 
-actual fun backendUrl(): String = internalBackendUrl.ifEmpty { "http://localhost:8080" }
+actual fun backendUrl(): String = internalBackendUrl.ifEmpty { "http://10.126.56.69:8088" }

@@ -22,9 +22,9 @@ import java.util.UUID
 @Serializable data class Task(val id: Long, val title: String, val description: String, val priority: String, val completed: Boolean)
 
 fun main() {
-    val port = 8085
-    println("STARTING SERVER ON 0.0.0.0:$port")
-    val server = embeddedServer(Netty, port = port, host = "0.0.0.0") {
+    println("STARTING SERVER ON 0.0.0.0:8088")
+    // Port 8088 to avoid conflicts, host 0.0.0.0 to allow phone connections
+    embeddedServer(Netty, port = 8088, host = "0.0.0.0") {
         install(ContentNegotiation) { json() }
         val database = Database(); val sessions = mutableMapOf<String, Long>()
         routing {
@@ -40,24 +40,20 @@ fun main() {
                 val input = r.username.lowercase()
 
                 val u = if (r.isGoogle) {
-                    // 1. Check if user already exists (manual registration or previous google login)
                     val existing = database.find(input)
                     if (existing != null) {
                         existing
                     } else if (input.endsWith("@bhrish.com")) {
-                        // 2. Only auto-register if domain matches
                         database.getOrCreateByEmail(input, input.substringBefore("@"))
                     } else {
-                        // 3. User not registered and domain doesn't match
                         return@post call.respond(HttpStatusCode.Forbidden, MessageResponse("User is not registered"))
                     }
                 } else {
-                    // Standard login: user must exist and password must match
-                    val authenticatedUser = database.authenticate(r.username, r.password)
-                    if (authenticatedUser == null) {
+                    val auth = database.authenticate(r.username, r.password)
+                    if (auth == null) {
                         return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid username or password. Please try again."))
                     }
-                    authenticatedUser
+                    auth
                 }
 
                 if (u == null) {
@@ -109,8 +105,7 @@ fun main() {
                 } else call.respond(HttpStatusCode.InternalServerError)
             }
         }
-    }
-    server.start(wait = true)
+    }.start(wait = true)
 }
 
 private fun ApplicationCall.uid(s: Map<String, Long>) =
