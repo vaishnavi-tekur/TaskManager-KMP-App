@@ -37,9 +37,10 @@ fun main() {
 
             post("/login") {
                 val r = call.receive<LoginRequest>()
-                val input = r.username.lowercase()
+                val usernameInput = r.username.trim()
 
                 val u = if (r.isGoogle) {
+                    val input = usernameInput.lowercase()
                     val existing = database.find(input)
                     if (existing != null) {
                         existing
@@ -49,9 +50,16 @@ fun main() {
                         return@post call.respond(HttpStatusCode.Forbidden, MessageResponse("User is not registered"))
                     }
                 } else {
-                    val auth = database.authenticate(r.username, r.password)
+                    // 1. Manually check if the user exists first
+                    val existingUser = database.find(usernameInput)
+                    if (existingUser == null) {
+                        return@post call.respond(HttpStatusCode.NotFound, MessageResponse("User doesn't exist"))
+                    }
+
+                    // 2. If user exists, check the password
+                    val auth = database.authenticate(usernameInput, r.password)
                     if (auth == null) {
-                        return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid username or password. Please try again."))
+                        return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid password. Please try again."))
                     }
                     auth
                 }
