@@ -15,7 +15,7 @@ import java.util.UUID
 @Serializable data class RegisterRequest(val name: String, val username: String, val email: String, val password: String)
 @Serializable data class LoginRequest(val username: String, val password: String, val isGoogle: Boolean = false)
 @Serializable data class ResetPasswordRequest(val email: String, val newPassword: String)
-@Serializable data class User(val id: Long, val name: String, val username: String, val email: String)
+@Serializable data class User(val id: Long, val name: String, val username: String, val email: String, val isActive: Boolean = true)
 @Serializable data class AuthResponse(val token: String, val user: User)
 @Serializable data class MessageResponse(val message: String)
 @Serializable data class TaskRequest(val title: String, val description: String, val priority: String = "Medium")
