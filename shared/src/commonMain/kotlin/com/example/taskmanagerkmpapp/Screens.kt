@@ -159,7 +159,7 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        if (u.isBlank()) { err = "Enter username"; return@Button }
+                        if (u.isBlank()) { err = "Enter username and password"; return@Button }
                         if (screen != "login" && e.isBlank()) { err = "Enter email"; return@Button }
                         if (p.isBlank()) { err = "Enter password"; return@Button }
                         if (screen != "login" && p != cp) { err = "Passwords mismatch"; return@Button }
@@ -281,7 +281,7 @@ internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate
                         val res = Repo.reset(e, np)
                         when (res) {
                             is ResetResponse.Success -> {
-                                msg = "Success!"; delay(1500); onNavigate("login")
+                                msg = "Password changed succesfully!"; delay(1500); onNavigate("login")
                             }
                             is ResetResponse.Error -> {
                                 err = res.message; msg = ""
