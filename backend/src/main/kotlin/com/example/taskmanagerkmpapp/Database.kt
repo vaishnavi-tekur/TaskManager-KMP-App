@@ -9,10 +9,10 @@ class Database(private val file: String = "data/taskmanager.db") {
         DriverManager.getConnection("jdbc:sqlite:$file").also { db -> db.createStatement().use { it.executeUpdate("PRAGMA foreign_keys=ON; " + "CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,username TEXT UNIQUE,email TEXT UNIQUE,password_hash TEXT,is_active INTEGER DEFAULT 'true'); " + // ADDED is_active HERE
                 "CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,title TEXT,description TEXT,priority TEXT,is_completed INTEGER DEFAULT 0,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)") } }
     }
-    fun register(r: RegisterRequest) = conn.prepareStatement("INSERT INTO users(name,username,email,password_hash) VALUES(?,?,?,?)").use { s -> s.setString(1,r.name); s.setString(2,r.username); s.setString(3,r.email.lowercase()); s.setString(4,hash(r.password)); try { s.executeUpdate(); find(r.username) } catch (e: Exception) { null } }
+    fun register(r: RegisterRequest) = conn.prepareStatement("INSERT INTO users(name,username,email,password_hash) VALUES(?,?,?,?)").use { s -> s.setString(1,r.name); s.setString(2,r.username); s.setString(3,r.email.lowercase()); s.setString(4,hash(r.password)); try { s.executeUpdate(); find(r.username) } catch (e: Exception) { println("DATABASE ERROR during register: ${e.message}"); e.printStackTrace(); null } }
     // Update this function to search both columns
     fun authenticate(u: String, p: String) =
-        conn.prepareStatement("SELECT * FROM users WHERE (username=? OR email=?) AND password_hash=? AND is_active=1").use { s ->
+        conn.prepareStatement("SELECT * FROM users WHERE (username=? OR email=?) AND password_hash=? AND is_active='true'").use { s ->
             s.setString(1, u)
             s.setString(2, u.lowercase())
             s.setString(3, hash(p))
@@ -31,11 +31,28 @@ class Database(private val file: String = "data/taskmanager.db") {
         }
     fun getOrCreateByEmail(email: String, name: String): User? {
         val existing = findByEmail(email)
-        if (existing != null) return existing
+        if (existing != null) {
+            // If the user exists but is inactive, reactivate them!
+            if (!existing.isActive) {
+                println("DATABASE: Reactivating inactive user with email: $email")
+                conn.prepareStatement("UPDATE users SET is_active = 'true' WHERE id = ?").use { s ->
+                    s.setLong(1, existing.id)
+                    s.executeUpdate()
+                }
+                return findByEmail(email)
+            }
+            return existing
+        }
 
         // Create new user automatically if they have the right domain
-        val username = email.substringBefore("@")
-        return register(RegisterRequest(name, username, email, "bhrish_auto_pass"))
+        val baseUsername = email.substringBefore("@")
+        val userWithDefaultName = register(RegisterRequest(name, baseUsername, email, "bhrish_auto_pass"))
+        if (userWithDefaultName != null) return userWithDefaultName
+
+        // If the base username is taken, try a unique one based on the full email
+        println("DATABASE: Username '$baseUsername' might be taken. Trying unique username fallback.")
+        val uniqueUsername = email.replace("@", "_").replace(".", "_")
+        return register(RegisterRequest(name, uniqueUsername, email, "bhrish_auto_pass"))
     }
 
     private fun findByEmail(email: String): User? =

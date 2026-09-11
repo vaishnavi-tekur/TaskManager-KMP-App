@@ -41,30 +41,40 @@ fun main() {
 
                 val u = if (r.isGoogle) {
                     val input = usernameInput.lowercase()
+                    println("BACKEND: Google Login attempt for email: $input")
                     val existing = database.find(input)
                     if (existing != null) {
+                        println("BACKEND: Existing user found: ${existing.username}")
                         existing
                     } else if (input.endsWith("@bhrish.com")) {
-                        database.getOrCreateByEmail(input, input.substringBefore("@"))
+                        println("BACKEND: Creating/Getting user for domain @bhrish.com")
+                        val created = database.getOrCreateByEmail(input, input.substringBefore("@"))
+                        if (created == null) println("BACKEND ERROR: Failed to get or create user for $input")
+                        created
                     } else {
+                        println("BACKEND: Forbidden domain: $input")
                         return@post call.respond(HttpStatusCode.Forbidden, MessageResponse("User is not registered"))
                     }
                 } else {
+                    println("BACKEND: Manual Login attempt for username: $usernameInput")
                     // 1. Manually check if the user exists first
                     val existingUser = database.find(usernameInput)
                     if (existingUser == null) {
+                        println("BACKEND: User not found: $usernameInput")
                         return@post call.respond(HttpStatusCode.NotFound, MessageResponse("User doesn't exist"))
                     }
 
                     // 2. If user exists, check the password
                     val auth = database.authenticate(usernameInput, r.password)
                     if (auth == null) {
+                        println("BACKEND: Invalid password for user: $usernameInput")
                         return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid password. Please try again."))
                     }
                     auth
                 }
 
                 if (u == null) {
+                    println("BACKEND ERROR: Login failed for $usernameInput (u is null)")
                     return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Login failed"))
                 }
 
