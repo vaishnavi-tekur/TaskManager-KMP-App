@@ -4,9 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SharedCommonTest {
-
     @Test
-    fun example() {
-        assertEquals(3, 1 + 2)
+    fun appSmokeTest() {
+        assertEquals(2, 1 + 1)
     }
 }
