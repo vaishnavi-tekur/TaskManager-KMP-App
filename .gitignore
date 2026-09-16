@@ -2,6 +2,7 @@
 .kotlin
 .gradle
 **/build/
+backend/data/
 xcuserdata
 !src/**/build/
 local.properties
@@ -17,3 +18,4 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+data/

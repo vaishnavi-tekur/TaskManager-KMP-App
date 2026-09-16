@@ -1,4 +1,7 @@
 [versions]
+credentials = "1.5.0-rc01"
+googleid = "1.1.1"
+kotlinx-datetime = "0.6.0"
 agp = "9.0.1"
 android-compileSdk = "36"
 android-minSdk = "24"
@@ -15,6 +18,10 @@ kotlin = "2.4.10"
 material3 = "1.11.0-alpha07"
 
 [libraries]
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
+androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
+googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
