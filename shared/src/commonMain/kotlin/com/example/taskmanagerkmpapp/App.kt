@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize; import androidx.compose.m
     val storage = remember { sessionStorage() }; var user by remember { mutableStateOf<User?>(null) }; var screen by remember { mutableStateOf("login") }
     LaunchedEffect(Unit) {
         val t = storage.read("token"); val e = storage.read("email"); val n = storage.read("name"); val u = storage.read("user")
-        if (t.isNotEmpty() && e.endsWith("@bhrish.com")) { Repo.token = t; user = User(n, u, e); screen = "taskList" }
+        if (t.isNotEmpty()) { Repo.token = t; user = User(n, u, e); screen = "taskList" }
     }
     val scope = rememberCoroutineScope(); val blue = Color(0xFF1A237E)
     MaterialTheme {
