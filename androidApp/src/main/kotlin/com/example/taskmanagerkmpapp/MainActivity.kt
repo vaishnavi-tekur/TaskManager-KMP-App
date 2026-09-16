@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         initializeSessionStorage(this)
         initializePlatform(this)
-        initializeGoogleLogin("YOUR_GOOGLE_CLIENT_ID") // In a real app, this would come from BuildConfig
+        initializeGoogleLogin("458266882707-vo57l2c9v2pdd28f2av1rg4l44kpkksr.apps.googleusercontent.com") // In a real app, this would come from BuildConfig
 
         setContent {
             App()
