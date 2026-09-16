@@ -1,5 +1,9 @@
 package com.example.taskmanagerkmpapp
 import androidx.compose.foundation.background; import androidx.compose.foundation.layout.*; import androidx.compose.foundation.lazy.*; import androidx.compose.foundation.shape.RoundedCornerShape; import androidx.compose.material.icons.Icons; import androidx.compose.material.icons.filled.*; import androidx.compose.material3.*; import androidx.compose.runtime.*; import androidx.compose.ui.*; import androidx.compose.ui.graphics.Color; import androidx.compose.ui.text.font.FontWeight; import androidx.compose.ui.text.input.*; import androidx.compose.ui.text.style.TextAlign; import androidx.compose.ui.unit.*; import kotlinx.coroutines.*
+import org.jetbrains.compose.resources.painterResource
+import taskmanagerkmpapp.shared.generated.resources.Res
+import taskmanagerkmpapp.shared.generated.resources.ic_google
+
 @Composable internal fun WelcomeScreen(user: User?, blue: Color, scope: CoroutineScope, onLogout: () -> Unit, onDeleteAccount: () -> Unit) {
     Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
         Text("Welcome, ${user?.name ?: "User"}!", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = blue); Spacer(Modifier.height(24.dp))
@@ -19,7 +23,24 @@ import androidx.compose.foundation.background; import androidx.compose.foundatio
                 if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp, textAlign = TextAlign.Center)
                 if (screen == "login") Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(false, {}) ; Text("Remember me", fontSize = 12.sp, color = Color.Gray) }; TextButton({ onNavigate("forgotPassword") }) { Text("Forgot password?", color = blue, fontSize = 12.sp, fontWeight = FontWeight.Bold) } }
                 Button({ if (screen != "login" && p != cp) { err = "Mismatch"; return@Button }; load = true; scope.launch { val res = if (screen == "login") Repo.login(u, p) else Repo.register(n, u.substringBefore("@"), u, p); if (res is AuthResponse.Success) { storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token); Repo.token = res.auth.token; onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email)) } else err = (res as AuthResponse.Error).message; load = false } }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(24.dp), colors = ButtonDefaults.buttonColors(blue)) { Text(if (load) "Loading..." else if (screen == "login") "Login" else "Register") }
-                if (screen == "login") { Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { HorizontalDivider(Modifier.weight(1f)) ; Text(" or ", color = Color.LightGray) ; HorizontalDivider(Modifier.weight(1f)) }; OutlinedButton({ err = "Social login not enabled" }, Modifier.fillMaxWidth()) { Icon(Icons.Default.AccountCircle, null, Modifier.size(20.dp)); Spacer(Modifier.width(12.dp)); Text("Continue with Social", color = Color.Black) } }
+                if (screen == "login") {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { HorizontalDivider(Modifier.weight(1f)) ; Text(" or ", color = Color.LightGray) ; HorizontalDivider(Modifier.weight(1f)) }
+                    OutlinedButton({
+                        if (load) return@OutlinedButton; err = ""; load = true
+                        googleLogin(scope) { res ->
+                            if (res != null) scope.launch {
+                                val a = Repo.login(res, "google_login", true)
+                                if (a is AuthResponse.Success) {
+                                    storage.save(a.auth.user.username, a.auth.user.name, a.auth.user.email, a.auth.token)
+                                    Repo.token = a.auth.token; onLoginSuccess(User(a.auth.user.name, a.auth.user.username, a.auth.user.email))
+                                } else err = (a as AuthResponse.Error).message; load = false
+                            } else { err = "Google Login Cancelled"; load = false }
+                        }
+                    }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+                        Icon(painterResource(Res.drawable.ic_google), null, Modifier.size(20.dp), tint = Color.Unspecified)
+                        Spacer(Modifier.width(12.dp)); Text("Continue with Google", color = Color.Black)
+                    }
+                }
                 TextButton({ onNavigate(if (screen == "login") "register" else "login"); err = "" }) { Text(if (screen == "login") "New user? Register" else "Have an account? Login", color = Color.Gray, fontSize = 12.sp) }
             }
         }
