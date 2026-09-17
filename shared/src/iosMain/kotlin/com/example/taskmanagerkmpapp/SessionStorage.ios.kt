@@ -1,9 +1,26 @@
 package com.example.taskmanagerkmpapp
+
 import platform.Foundation.NSUserDefaults
+
 private class IOSSessionStorage : SessionStorage {
-    private val d = NSUserDefaults.standardUserDefaults
-    override fun save(u: String, n: String, e: String, t: String) { d.setObject(u, "user"); d.setObject(n, "name"); d.setObject(e, "email"); d.setObject(t, "token") }
-    override fun read(k: String): String = d.stringForKey(k) ?: ""
-    override fun clear() = listOf("user", "name", "email", "token").forEach { d.removeObjectForKey(it) }
+    private val defaults = NSUserDefaults.standardUserDefaults
+    
+    override fun save(user: String, name: String, email: String, token: String) {
+        defaults.setObject(user, "user"); defaults.setObject(name, "name")
+        defaults.setObject(email, "email"); defaults.setObject(token, "token")
+    }
+    
+    override fun saveTasks(json: String) {
+        defaults.setObject(json, "tasks_cache")
+    }
+    
+    override fun read(key: String): String = defaults.stringForKey(key) ?: ""
+    
+    override fun clear() { 
+        listOf("user", "name", "email", "token", "tasks_cache").forEach { 
+            defaults.removeObjectForKey(it) 
+        } 
+    }
 }
+
 actual fun sessionStorage(): SessionStorage = IOSSessionStorage()
