@@ -1,33 +1,129 @@
 package com.example.taskmanagerkmpapp
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
+
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
 expect fun getBackendEngine(): io.ktor.client.engine.HttpClientEngine
 expect fun backendUrl(): String
+
 @Serializable data class ApiUser(val id: Long, val name: String, val username: String, val email: String)
-@Serializable data class LoginBody(val username: String, val password: String, val isGoogle: Boolean = false)
+@Serializable data class LoginBody(
+    val username: String,
+    val password: String,
+    val isGoogle: Boolean = false
+)
 @Serializable data class RegisterBody(val name: String, val username: String, val email: String, val password: String)
 @Serializable data class ResetBody(val email: String, val newPassword: String)
 @Serializable data class AuthBody(val token: String, val user: ApiUser)
+@Serializable data class ApiTask(val id: Long, val title: String, val description: String, val priority: String, val completed: Boolean)
+@Serializable data class TaskBody(val title: String, val description: String, val priority: String = "Medium")
+@Serializable data class CompleteBody(val completed: Boolean)
 @Serializable data class MessageBody(val message: String)
-@Serializable data class ApiTask(val id: Long, val title: String, val description: String, val completed: Boolean)
-class BackendApi {
-    private val client = HttpClient(getBackendEngine()) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }) } }
-    suspend fun getTasks(t: String): List<ApiTask> = try { client.get("${backendUrl()}/tasks") { auth(t) }.body() } catch (e: Exception) { emptyList() }
-    suspend fun addTask(t: String, ti: String, d: String): Boolean = try { client.post("${backendUrl()}/tasks") { auth(t); contentType(ContentType.Application.Json); setBody(ApiTask(0, ti, d, false)) }.status == HttpStatusCode.Created } catch (e: Exception) { false }
-    suspend fun updateTask(t: String, ta: ApiTask): Boolean = try { client.put("${backendUrl()}/tasks/${ta.id}") { auth(t); contentType(ContentType.Application.Json); setBody(ta) }.status == HttpStatusCode.OK } catch (e: Exception) { false }
-    suspend fun deleteTask(t: String, id: Long): Boolean = try { client.delete("${backendUrl()}/tasks/$id") { auth(t) }.status == HttpStatusCode.OK } catch (e: Exception) { false }
-    suspend fun login(u: String, p: String, g: Boolean = false): AuthResponse = try { val r = client.post("${backendUrl()}/login") { contentType(ContentType.Application.Json); setBody(LoginBody(u, p, g)) }; if (r.status == HttpStatusCode.OK) AuthResponse.Success(r.body()) else AuthResponse.Error(r.bOrM()) } catch (e: Exception) { AuthResponse.Error("Network error") }
-    suspend fun register(b: RegisterBody): AuthResponse = try { val r = client.post("${backendUrl()}/register") { contentType(ContentType.Application.Json); setBody(b) }; if (r.status == HttpStatusCode.Created || r.status == HttpStatusCode.OK) login(b.username, b.password) else AuthResponse.Error(r.bOrM()) } catch (e: Exception) { AuthResponse.Error("Network error") }
-    suspend fun reset(b: ResetBody): Boolean = try { client.post("${backendUrl()}/forgot-password") { contentType(ContentType.Application.Json); setBody(b) }.status == HttpStatusCode.OK } catch (e: Exception) { false }
-    suspend fun deleteAccount(t: String): Boolean = try { client.delete("${backendUrl()}/delete-account") { auth(t) }.status == HttpStatusCode.OK } catch (e: Exception) { false }
-    private fun HttpRequestBuilder.auth(t: String) { header("Authorization", "Bearer $t") }
-    private suspend fun HttpResponse.bOrM(): String = try { val t = bodyAsText(); if (t.contains("\"message\"")) Json { ignoreUnknownKeys = true }.decodeFromString<MessageBody>(t).message else t.ifBlank { "Error $status" } } catch (e: Exception) { "Error $status" }
+
+sealed class ResetResponse {
+    data object Success : ResetResponse()
+    data class Error(val message: String) : ResetResponse()
 }
-sealed class AuthResponse { data class Success(val auth: AuthBody) : AuthResponse(); data class Error(val message: String) : AuthResponse() }
+
+class BackendApi {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        encodeDefaults = true
+    }
+    private val client = HttpClient(getBackendEngine()) {
+        install(ContentNegotiation) {
+            json(json)
+        }
+    }
+
+    suspend fun login(user: String, password: String, isGoogle: Boolean = false): AuthResponse = try {
+        val resp = client.post("${backendUrl()}/login") {
+            contentType(ContentType.Application.Json)
+            setBody(LoginBody(user, password, isGoogle))
+        }
+        if (resp.status == HttpStatusCode.OK) AuthResponse.Success(resp.body<AuthBody>())
+        else AuthResponse.Error(resp.bodyOrMessage())
+    } catch (e: Exception) { AuthResponse.Error("Network error: ${e.message}") }
+
+    suspend fun register(body: RegisterBody): AuthResponse = try {
+        val resp = client.post("${backendUrl()}/register") { 
+            contentType(ContentType.Application.Json)
+            setBody(body) 
+        }
+        if (resp.status == HttpStatusCode.Created || resp.status == HttpStatusCode.OK) {
+            login(body.username, body.password)
+        } else AuthResponse.Error(resp.bodyOrMessage())
+    } catch (e: Exception) { AuthResponse.Error("Network error: ${e.message}") }
+
+    suspend fun reset(body: ResetBody): ResetResponse = try {
+        val resp = client.post("${backendUrl()}/forgot-password") {
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }
+        if (resp.status == HttpStatusCode.OK) ResetResponse.Success
+        else ResetResponse.Error(resp.bodyOrMessage())
+    } catch (e: Exception) { ResetResponse.Error("Network error: ${e.message}") }
+
+    suspend fun getTasks(token: String): List<ApiTask> = try { 
+        client.get("${backendUrl()}/tasks") { 
+            auth(token) 
+        }.body<List<ApiTask>>()
+    } catch (e: Exception) { emptyList() }
+
+    suspend fun addTask(token: String, title: String, desc: String, priority: String): Boolean = try { 
+        client.post("${backendUrl()}/tasks") { 
+            auth(token)
+            contentType(ContentType.Application.Json)
+            setBody(TaskBody(title, desc, priority)) 
+        }.status == HttpStatusCode.Created 
+    } catch (e: Exception) { false }
+
+    suspend fun complete(token: String, id: Long, done: Boolean): Boolean = try { 
+        client.put("${backendUrl()}/tasks/$id") { 
+            auth(token)
+            contentType(ContentType.Application.Json)
+            setBody(CompleteBody(done)) 
+        }.status.value in 200..299 
+    } catch (e: Exception) { false }
+
+    suspend fun delete(token: String, id: Long): Boolean = try { 
+        client.delete("${backendUrl()}/tasks/$id") { 
+            auth(token) 
+        }.status.value in 200..299 
+    } catch (e: Exception) { false }
+
+    suspend fun deleteAccount(token: String): Boolean = try {
+        client.delete("${backendUrl()}/delete-account") { auth(token) }.status == HttpStatusCode.OK
+    } catch (e: Exception) { false }
+
+    private fun io.ktor.client.request.HttpRequestBuilder.auth(token: String) { header("Authorization", "Bearer $token") }
+    
+    private suspend fun io.ktor.client.statement.HttpResponse.bodyOrMessage(): String = try {
+        val text = bodyAsText()
+        if (text.contains("\"message\"")) {
+            json.decodeFromString<MessageBody>(text).message
+        } else {
+            text.ifBlank { "Error $status" }
+        }
+    } catch (e: Exception) { "Error $status" }
+}
+
+sealed class AuthResponse {
+    data class Success(val auth: AuthBody) : AuthResponse()
+    data class Error(val message: String) : AuthResponse()
+}

@@ -1,15 +1,21 @@
 package com.example.taskmanagerkmpapp
+
 import kotlinx.serialization.Serializable
+
 internal data class User(val name:String, val username:String, val email:String)
-internal data class Task(val id: Long, val title: String, val description: String, val completed: Boolean)
+
+@Serializable
+internal data class Task(val id:Int, val title:String, val description:String, val priority:String = "Medium", val done:Boolean = false)
+
 internal object Repo {
-    private val api = BackendApi(); var token = ""
-    suspend fun login(u:String,p:String,g:Boolean=false) = api.login(u,p,g)
-    suspend fun register(n:String,u:String,e:String,p:String) = api.register(RegisterBody(n,u,e,p))
-    suspend fun reset(e:String,np:String) = api.reset(ResetBody(e,np))
+    private val api = BackendApi()
+    var token = ""
+    suspend fun login(u:String, p:String, isGoogle: Boolean = false): AuthResponse = api.login(u, p, isGoogle)
+    suspend fun register(n:String,u:String,e:String,p:String): AuthResponse = api.register(RegisterBody(n,u,e,p))
+    suspend fun reset(e: String, np: String): ResetResponse = api.reset(ResetBody(e, np))
+    suspend fun tasks(): List<Task> = api.getTasks(token).map { Task(it.id.toInt(),it.title,it.description,it.priority,it.completed) }
+    suspend fun add(task:Task) = api.addTask(token, task.title, task.description, task.priority)
+    suspend fun complete(id:Int,done:Boolean) = api.complete(token,id.toLong(),done)
+    suspend fun delete(id:Int) = api.delete(token,id.toLong())
     suspend fun deleteAccount() = api.deleteAccount(token)
-    suspend fun getTasks() = api.getTasks(token).map { Task(it.id, it.title, it.description, it.completed) }
-    suspend fun addTask(t:String, d:String) = api.addTask(token, t, d)
-    suspend fun updateTask(t:Task) = api.updateTask(token, ApiTask(t.id, t.title, t.description, t.completed))
-    suspend fun deleteTask(id:Long) = api.deleteTask(token, id)
 }

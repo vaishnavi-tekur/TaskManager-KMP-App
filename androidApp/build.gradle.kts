@@ -1,4 +1,12 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+// Read properties from .env file
+val envFile = project.rootProject.file(".env")
+val env = Properties()
+if (envFile.exists()) {
+    envFile.inputStream().use { env.load(it) }
+}
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -9,14 +17,6 @@ kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_11
     }
-}
-dependencies {
-    implementation(project(":shared"))
-
-    implementation(libs.androidx.activity.compose)
-
-    implementation(libs.compose.uiToolingPreview)
-    debugImplementation(libs.compose.uiTooling)
 }
 
 android {
@@ -29,12 +29,18 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+
+        // Inject variables into BuildConfig
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${env.getProperty("GOOGLE_CLIENT_ID") ?: ""}\"")
+        buildConfigField("String", "BACKEND_URL", "\"${env.getProperty("BACKEND_URL") ?: ""}\"")
     }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -44,11 +50,21 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    
     buildFeatures {
         compose = true
+        buildConfig = true
     }
+}
+
+dependencies {
+    implementation(project(":shared"))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.compose.uiToolingPreview)
+    debugImplementation(libs.compose.uiTooling)
 }
