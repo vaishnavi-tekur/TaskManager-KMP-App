@@ -29,8 +29,8 @@ expect fun backendUrl(): String
 @Serializable data class RegisterBody(val name: String, val username: String, val email: String, val password: String)
 @Serializable data class ResetBody(val email: String, val newPassword: String)
 @Serializable data class AuthBody(val token: String, val user: ApiUser)
-@Serializable data class ApiTask(val id: Long, val title: String, val description: String, val priority: String, val completed: Boolean)
-@Serializable data class TaskBody(val title: String, val description: String, val priority: String = "Medium")
+@Serializable data class ApiTask(val id: Long, val title: String, val description: String, val priority: String, val completed: Boolean, val dueDate: Long? = null)
+@Serializable data class TaskBody(val title: String, val description: String, val priority: String = "Medium", val dueDate: Long? = null)
 @Serializable data class CompleteBody(val completed: Boolean)
 @Serializable data class MessageBody(val message: String)
 
@@ -85,19 +85,19 @@ class BackendApi {
         }.body<List<ApiTask>>()
     } catch (e: Exception) { emptyList() }
 
-    suspend fun addTask(token: String, title: String, desc: String, priority: String): Boolean = try { 
+    suspend fun addTask(token: String, title: String, desc: String, priority: String, dueDate: Long?): Boolean = try { 
         client.post("${backendUrl()}/tasks") { 
             auth(token)
             contentType(ContentType.Application.Json)
-            setBody(TaskBody(title, desc, priority)) 
+            setBody(TaskBody(title, desc, priority, dueDate)) 
         }.status == HttpStatusCode.Created 
     } catch (e: Exception) { false }
 
-    suspend fun complete(token: String, id: Long, done: Boolean): Boolean = try { 
+    suspend fun complete(token: String, id: Long, done: Boolean, dueDate: Long?): Boolean = try { 
         client.put("${backendUrl()}/tasks/$id") { 
             auth(token)
             contentType(ContentType.Application.Json)
-            setBody(CompleteBody(done)) 
+            setBody(CompleteBody(done)) // Keep complete body simple, or add it if backend needs it
         }.status.value in 200..299 
     } catch (e: Exception) { false }
 

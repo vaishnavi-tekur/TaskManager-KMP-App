@@ -17,7 +17,37 @@ import androidx.compose.ui.unit.*
 import kotlinx.coroutines.*
 import org.jetbrains.compose.resources.painterResource
 import taskmanagerkmpapp.shared.generated.resources.Res
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import taskmanagerkmpapp.shared.generated.resources.ic_google
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toInstant
+
+@OptIn(ExperimentalMaterial3Api::class)
+private fun formatMillis(millis: Long?): String {
+    if (millis == null) return ""
+    val instant = Instant.fromEpochMilliseconds(millis)
+    val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    val month = dateTime.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+    
+    val amPm = if (dateTime.hour < 12) "AM" else "PM"
+    val hour12 = when {
+        dateTime.hour == 0 -> 12
+        dateTime.hour > 12 -> dateTime.hour - 12
+        else -> dateTime.hour
+    }
+    
+    val hour = hour12.toString().padStart(2, '0')
+    val minute = dateTime.minute.toString().padStart(2, '0')
+    return "${dateTime.dayOfMonth} $month ${dateTime.year}, $hour:$minute $amPm"
+}
 
 @Composable
 internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
@@ -61,6 +91,13 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
                             Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
                                 Text(task.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                 Text(task.description, fontSize = 13.sp, color = Color.Gray)
+                                if (task.dueDate != null) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Event, null, modifier = Modifier.size(12.dp), tint = Color.Gray)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(formatMillis(task.dueDate), fontSize = 11.sp, color = Color.Gray)
+                                    }
+                                }
                                 Text(task.priority, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (task.priority == "High") Color.Red else if (task.priority == "Medium") Color(0xFFF57C00) else Color.Green)
                             }
                             IconButton({ scope.launch { Repo.delete(task.id); onTasksUpdated(Repo.tasks()) } }) { Icon(Icons.Default.Delete, null, tint = Color(0xFFEF9A9A)) }
@@ -77,6 +114,10 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
 internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
     var title by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }
     var priority by remember { mutableStateOf("Medium") }; var expanded by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf<Long?>(null) }
+
     Scaffold(topBar = { Box(Modifier.fillMaxWidth().height(56.dp).background(Color(0xFF0D1B4D))) }) { p ->
         Column(Modifier.fillMaxSize().padding(p).background(Color.White)) {
             Text("Add New Task", Modifier.fillMaxWidth().padding(32.dp), color = blue, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -87,9 +128,82 @@ internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (Stri
                     TextField(priority, {}, Modifier.menuAnchor().fillMaxWidth(), readOnly = true, label = { Text("Priority") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }, colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent))
                     ExposedDropdownMenu(expanded, { expanded = false }) { listOf("Low", "Medium", "High").forEach { DropdownMenuItem(text = { Text(it) }, onClick = { priority = it; expanded = false }) } }
                 }
-                Button({ if (title.isNotBlank()) scope.launch { Repo.add(Task(0, title, desc, priority)); onTasksUpdated(Repo.tasks()); onNavigate("tasks") } }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp), colors = ButtonDefaults.buttonColors(blue)) { Text("SAVE TASK", fontWeight = FontWeight.Bold) }
+                
+                OutlinedButton(onClick = { showDatePicker = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
+                    Icon(Icons.Default.Schedule, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (selectedDate == null) "Set Date & Time" else formatMillis(selectedDate))
+                }
+
+                Button(
+                    onClick = {
+                        if (title.isNotBlank()) {
+                            scope.launch {
+                                // Just one call to add, passing the selectedDate
+                                Repo.add(Task(0, title, desc, priority, dueDate = selectedDate))
+                                onTasksUpdated(Repo.tasks())
+                                onNavigate("tasks")
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    colors = ButtonDefaults.buttonColors(blue)
+                ) {
+                    Text("SAVE TASK", fontWeight = FontWeight.Bold)
+                }
                 OutlinedButton({ onNavigate("tasks") }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp)) { Text("CANCEL", color = Color.Gray) }
             }
+        }
+        
+        if (showDatePicker) {
+            val datePickerState = rememberDatePickerState()
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        selectedDate = datePickerState.selectedDateMillis
+                        showDatePicker = false
+                        showTimePicker = true
+                    }) { Text("Next") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                }
+            ) {
+                DatePicker(state = datePickerState)
+            }
+        }
+
+        if (showTimePicker) {
+            val timePickerState = rememberTimePickerState()
+            AlertDialog(
+                onDismissRequest = { showTimePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val dateMillis = selectedDate ?: 0L
+                        val utcDate = Instant.fromEpochMilliseconds(dateMillis).toLocalDateTime(TimeZone.UTC).date
+                        val localDateTime = LocalDateTime(
+                            year = utcDate.year,
+                            month = utcDate.month,
+                            dayOfMonth = utcDate.dayOfMonth,
+                            hour = timePickerState.hour,
+                            minute = timePickerState.minute
+                        )
+                        selectedDate = localDateTime.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds()
+                        showTimePicker = false
+                    }) { Text("OK") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showTimePicker = false }) { Text("Back") }
+                },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                        Text("Select Time", Modifier.padding(bottom = 16.dp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        TimePicker(state = timePickerState)
+                    }
+                }
+            )
         }
     }
 }
@@ -240,6 +354,7 @@ internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate
     var msg by remember { mutableStateOf("") }; var err by remember { mutableStateOf("") }; var load by remember { mutableStateOf(false) }
     var vis by remember { mutableStateOf(false) }
     var vis2 by remember { mutableStateOf(false) }
+
     Box(Modifier.fillMaxSize().background(Color(0xFFF5F5F5)), Alignment.Center) {
         Card(Modifier.fillMaxWidth().padding(24.dp), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(Color.White)) {
             @Suppress("UNUSED_EXPRESSION")

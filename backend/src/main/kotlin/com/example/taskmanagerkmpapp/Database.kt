@@ -10,7 +10,7 @@ class Database(private val file: String = "data/taskmanager.db") {
         DriverManager.getConnection("jdbc:sqlite:$file").also { db -> 
             db.createStatement().use { it.executeUpdate("PRAGMA foreign_keys=ON; " +
                 "CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,username TEXT UNIQUE,email TEXT UNIQUE,password_hash TEXT,is_active INTEGER DEFAULT 1); " +
-                "CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, description TEXT, priority TEXT DEFAULT 'Medium', completed INTEGER DEFAULT 0, FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)") 
+                "CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, description TEXT, priority TEXT DEFAULT 'Medium', completed INTEGER DEFAULT 0, due_date INTEGER, FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)") 
             } 
         } 
     }
@@ -25,23 +25,25 @@ class Database(private val file: String = "data/taskmanager.db") {
             } 
         }
 
-    fun addTask(uid: Long, t: String, d: String, p: String) = 
-        conn.prepareStatement("INSERT INTO tasks(user_id,title,description,priority) VALUES(?,?,?,?)").use { s -> 
+    fun addTask(uid: Long, t: String, d: String, p: String, due: Long?) = 
+        conn.prepareStatement("INSERT INTO tasks(user_id,title,description,priority,due_date) VALUES(?,?,?,?,?)").use { s -> 
             s.setLong(1,uid)
             s.setString(2,t)
             s.setString(3,d)
             s.setString(4,p)
+            if (due != null) s.setLong(5, due) else s.setNull(5, Types.INTEGER)
             s.executeUpdate()==1 
         }
 
-    fun updateTask(tid: Long, uid: Long, t: String, d: String, p: String, c: Boolean) = 
-        conn.prepareStatement("UPDATE tasks SET title=?, description=?, priority=?, completed=? WHERE id=? AND user_id=?").use { s -> 
+    fun updateTask(tid: Long, uid: Long, t: String, d: String, p: String, c: Boolean, due: Long?) = 
+        conn.prepareStatement("UPDATE tasks SET title=?, description=?, priority=?, completed=?, due_date=? WHERE id=? AND user_id=?").use { s -> 
             s.setString(1,t)
             s.setString(2,d)
             s.setString(3,p)
             s.setInt(4,if(c) 1 else 0)
-            s.setLong(5,tid)
-            s.setLong(6,uid)
+            if (due != null) s.setLong(5, due) else s.setNull(5, Types.INTEGER)
+            s.setLong(6,tid)
+            s.setLong(7,uid)
             s.executeUpdate()==1 
         }
 
@@ -126,7 +128,8 @@ class Database(private val file: String = "data/taskmanager.db") {
         getString("title"), 
         getString("description"), 
         getString("priority") ?: "Medium",
-        getInt("completed") == 1
+        getInt("completed") == 1,
+        getLong("due_date").let { if (wasNull()) null else it }
     )
 
     private fun hash(v: String) = MessageDigest.getInstance("SHA-256").digest(v.toByteArray()).joinToString("") { "%02x".format(it) }

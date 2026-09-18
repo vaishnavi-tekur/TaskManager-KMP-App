@@ -20,8 +20,8 @@ import java.util.UUID
 @Serializable data class User(val id: Long, val name: String, val username: String, val email: String, val isActive: Boolean = true)
 @Serializable data class AuthResponse(val token: String, val user: User)
 @Serializable data class MessageResponse(val message: String)
-@Serializable data class TaskRequest(val title: String, val description: String, val priority: String = "Medium", val completed: Boolean = false)
-@Serializable data class TaskResponse(val id: Long, val title: String, val description: String, val priority: String, val completed: Boolean)
+@Serializable data class TaskRequest(val title: String, val description: String, val priority: String = "Medium", val completed: Boolean = false, val dueDate: Long? = null)
+@Serializable data class TaskResponse(val id: Long, val title: String, val description: String, val priority: String, val completed: Boolean, val dueDate: Long? = null)
 
 fun main() {
     System.setProperty("io.ktor.development", "true")
@@ -76,14 +76,14 @@ fun main() {
                 post { 
                     val u = call.uid(s) ?: return@post call.respond(HttpStatusCode.Unauthorized)
                     val r = call.receive<TaskRequest>()
-                    if (db.addTask(u, r.title, r.description, r.priority)) call.respond(HttpStatusCode.Created) 
+                    if (db.addTask(u, r.title, r.description, r.priority, r.dueDate)) call.respond(HttpStatusCode.Created) 
                     else call.respond(HttpStatusCode.InternalServerError) 
                 }
                 put("/{id}") { 
                     val u = call.uid(s) ?: return@put call.respond(HttpStatusCode.Unauthorized)
                     val tid = call.parameters["id"]?.toLongOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest)
                     val r = call.receive<TaskRequest>()
-                    if (db.updateTask(tid, u, r.title, r.description, r.priority, r.completed)) call.respond(HttpStatusCode.OK) 
+                    if (db.updateTask(tid, u, r.title, r.description, r.priority, r.completed, r.dueDate)) call.respond(HttpStatusCode.OK) 
                     else call.respond(HttpStatusCode.NotFound) 
                 }
                 delete("/{id}") { 
