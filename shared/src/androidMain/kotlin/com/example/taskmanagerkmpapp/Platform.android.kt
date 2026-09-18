@@ -57,7 +57,6 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
             println("GOOGLE LOGIN: Starting request...")
             val result = credentialManager.getCredential(context, request)
             val cred = result.credential
-<<<<<<< HEAD
             println("GOOGLE LOGIN: Credential received: ${cred.type}")
             
             if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
@@ -66,28 +65,16 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
                 onResult(googleIdTokenCredential.id)
             } else {
                 println("GOOGLE LOGIN FAILED: Unexpected credential type")
-=======
-            
-            if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(cred.data)
-                onResult(googleIdTokenCredential.id)
-            } else {
->>>>>>> task/kmp-task-scheduling
                 onResult(null)
             }
         } catch (e: Exception) {
             println("GOOGLE LOGIN FAILED: ${e.message}")
-<<<<<<< HEAD
-            if (e.message?.contains("No credentials available") == true) {
-                println("GOOGLE LOGIN: Emulator detected or no account found. Falling back to mock account for testing.")
-=======
             // Check if we are likely on an emulator or have no accounts
             if (e is androidx.credentials.exceptions.GetCredentialException || 
                 e.message?.contains("No credentials available") == true ||
                 e.message?.contains("cancelled") == true) {
                 
                 println("GOOGLE LOGIN: Emulator detected or error occurred. Falling back to mock account for testing.")
->>>>>>> task/kmp-task-scheduling
                 onResult("test@bhrish.com")
             } else {
                 e.printStackTrace()

@@ -30,11 +30,6 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toInstant
 
-<<<<<<< HEAD
-@Composable
-internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
-    val dateString = "17.09.2026"
-=======
 @OptIn(ExperimentalMaterial3Api::class)
 private fun formatMillis(millis: Long?): String {
     if (millis == null) return ""
@@ -57,7 +52,6 @@ private fun formatMillis(millis: Long?): String {
 @Composable
 internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
     val dateString = "18.09.2026"
->>>>>>> task/kmp-task-scheduling
 
     LaunchedEffect(Unit) { onTasksUpdated(Repo.tasks()) }
 
@@ -97,8 +91,6 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
                             Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
                                 Text(task.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                 Text(task.description, fontSize = 13.sp, color = Color.Gray)
-<<<<<<< HEAD
-=======
                                 if (task.dueDate != null) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Event, null, modifier = Modifier.size(12.dp), tint = Color.Gray)
@@ -106,7 +98,6 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
                                         Text(formatMillis(task.dueDate), fontSize = 11.sp, color = Color.Gray)
                                     }
                                 }
->>>>>>> task/kmp-task-scheduling
                                 Text(task.priority, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (task.priority == "High") Color.Red else if (task.priority == "Medium") Color(0xFFF57C00) else Color.Green)
                             }
                             IconButton({ scope.launch { Repo.delete(task.id); onTasksUpdated(Repo.tasks()) } }) { Icon(Icons.Default.Delete, null, tint = Color(0xFFEF9A9A)) }
@@ -123,13 +114,10 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
 internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
     var title by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }
     var priority by remember { mutableStateOf("Medium") }; var expanded by remember { mutableStateOf(false) }
-<<<<<<< HEAD
-=======
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf<Long?>(null) }
 
->>>>>>> task/kmp-task-scheduling
     Scaffold(topBar = { Box(Modifier.fillMaxWidth().height(56.dp).background(Color(0xFF0D1B4D))) }) { p ->
         Column(Modifier.fillMaxSize().padding(p).background(Color.White)) {
             Text("Add New Task", Modifier.fillMaxWidth().padding(32.dp), color = blue, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -140,12 +128,6 @@ internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (Stri
                     TextField(priority, {}, Modifier.menuAnchor().fillMaxWidth(), readOnly = true, label = { Text("Priority") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }, colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent))
                     ExposedDropdownMenu(expanded, { expanded = false }) { listOf("Low", "Medium", "High").forEach { DropdownMenuItem(text = { Text(it) }, onClick = { priority = it; expanded = false }) } }
                 }
-<<<<<<< HEAD
-                Button({ if (title.isNotBlank()) scope.launch { Repo.add(Task(0, title, desc, priority)); onTasksUpdated(Repo.tasks()); onNavigate("tasks") } }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp), colors = ButtonDefaults.buttonColors(blue)) { Text("SAVE TASK", fontWeight = FontWeight.Bold) }
-                OutlinedButton({ onNavigate("tasks") }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(4.dp)) { Text("CANCEL", color = Color.Gray) }
-            }
-        }
-=======
                 
                 OutlinedButton(onClick = { showDatePicker = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp)) {
                     Icon(Icons.Default.Schedule, null, Modifier.size(18.dp))
@@ -157,7 +139,6 @@ internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (Stri
                     onClick = {
                         if (title.isNotBlank()) {
                             scope.launch {
-                                // Just one call to add, passing the selectedDate
                                 Repo.add(Task(0, title, desc, priority, dueDate = selectedDate))
                                 onTasksUpdated(Repo.tasks())
                                 onNavigate("tasks")
@@ -223,7 +204,6 @@ internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (Stri
                 }
             )
         }
->>>>>>> task/kmp-task-scheduling
     }
 }
 
@@ -373,10 +353,7 @@ internal fun ForgotPasswordScreen(blue: Color, scope: CoroutineScope, onNavigate
     var msg by remember { mutableStateOf("") }; var err by remember { mutableStateOf("") }; var load by remember { mutableStateOf(false) }
     var vis by remember { mutableStateOf(false) }
     var vis2 by remember { mutableStateOf(false) }
-<<<<<<< HEAD
-=======
 
->>>>>>> task/kmp-task-scheduling
     Box(Modifier.fillMaxSize().background(Color(0xFFF5F5F5)), Alignment.Center) {
         Card(Modifier.fillMaxWidth().padding(24.dp), RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(Color.White)) {
             @Suppress("UNUSED_EXPRESSION")

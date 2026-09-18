@@ -5,9 +5,6 @@ import kotlinx.serialization.Serializable
 internal data class User(val name:String, val username:String, val email:String)
 
 @Serializable
-<<<<<<< HEAD
-internal data class Task(val id:Int, val title:String, val description:String, val priority:String = "Medium", val done:Boolean = false)
-=======
 internal data class Task(
     val id: Int,
     val title: String,
@@ -16,21 +13,10 @@ internal data class Task(
     val done: Boolean = false,
     val dueDate: Long? = null
 )
->>>>>>> task/kmp-task-scheduling
 
 internal object Repo {
     private val api = BackendApi()
     var token = ""
-<<<<<<< HEAD
-    suspend fun login(u:String, p:String, isGoogle: Boolean = false): AuthResponse = api.login(u, p, isGoogle)
-    suspend fun register(n:String,u:String,e:String,p:String): AuthResponse = api.register(RegisterBody(n,u,e,p))
-    suspend fun reset(e: String, np: String): ResetResponse = api.reset(ResetBody(e, np))
-    suspend fun tasks(): List<Task> = api.getTasks(token).map { Task(it.id.toInt(),it.title,it.description,it.priority,it.completed) }
-    suspend fun add(task:Task) = api.addTask(token, task.title, task.description, task.priority)
-    suspend fun complete(id:Int,done:Boolean) = api.complete(token,id.toLong(),done)
-    suspend fun delete(id:Int) = api.delete(token,id.toLong())
-    suspend fun deleteAccount() = api.deleteAccount(token)
-=======
 
     suspend fun login(u: String, p: String, isGoogle: Boolean = false): AuthResponse {
         return api.login(u, p, isGoogle)
@@ -87,5 +73,4 @@ internal object Repo {
     suspend fun deleteAccount(): Boolean {
         return api.deleteAccount(token)
     }
->>>>>>> task/kmp-task-scheduling
 }

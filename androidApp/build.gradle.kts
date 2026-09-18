@@ -1,10 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
-<<<<<<< HEAD
-=======
 // Read properties from .env file
->>>>>>> task/kmp-task-scheduling
 val envFile = project.rootProject.file(".env")
 val env = Properties()
 if (envFile.exists()) {
@@ -33,10 +30,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-<<<<<<< HEAD
-=======
         // Inject variables into BuildConfig
->>>>>>> task/kmp-task-scheduling
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${env.getProperty("GOOGLE_CLIENT_ID") ?: ""}\"")
         buildConfigField("String", "BACKEND_URL", "\"${env.getProperty("BACKEND_URL") ?: ""}\"")
     }

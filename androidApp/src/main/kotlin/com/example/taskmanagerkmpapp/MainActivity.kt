@@ -14,11 +14,7 @@ class MainActivity : ComponentActivity() {
         initializeSessionStorage(this)
         initializePlatform(this)
 
-<<<<<<< HEAD
-        // Ensure these use the correct BuildConfig
-=======
         // Use the values from .env (via BuildConfig)
->>>>>>> task/kmp-task-scheduling
         initializeGoogleLogin(BuildConfig.GOOGLE_CLIENT_ID)
         initializeBackendUrl(BuildConfig.BACKEND_URL)
 
