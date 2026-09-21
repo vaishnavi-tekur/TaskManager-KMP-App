@@ -23,6 +23,9 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDecoration
+import kotlinx.datetime.Clock
 import taskmanagerkmpapp.shared.generated.resources.ic_google
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -51,7 +54,11 @@ private fun formatMillis(millis: Long?): String {
 
 @Composable
 internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: CoroutineScope, onNavigate: (String) -> Unit, onTasksUpdated: (List<Task>) -> Unit) {
-    val dateString = "18.09.2026"
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    val day = now.dayOfMonth.toString().padStart(2, '0')
+    val monthInt = now.monthNumber
+    val month = monthInt.toString().padStart(2, '0')
+    val dateString = "$day.$month.${now.year}"
 
     LaunchedEffect(Unit) { onTasksUpdated(Repo.tasks()) }
 
@@ -70,15 +77,16 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton({ logout() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
                         Column {
-                            Text("${user?.name ?: "User"}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            Text("${(user?.name ?: "User").uppercase()}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(dateString, color = Color.White.copy(0.7f), fontSize = 14.sp)
                             }
                         }
                     }
-                    Card(colors = CardDefaults.cardColors(Color.White), shape = RoundedCornerShape(4.dp), modifier = Modifier.size(70.dp, 75.dp)) {
+                    Card(colors = CardDefaults.cardColors(Color.White), shape = RoundedCornerShape(8.dp), modifier = Modifier.width(80.dp).height(75.dp)) {
                         Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
-                            Text("${items.size}", color = blue, fontSize = 26.sp, fontWeight = FontWeight.Bold); Text("Tasks", color = Color.Gray, fontSize = 12.sp)
+                            Text("${items.size}", color = blue, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text("Tasks", color = Color.Gray, fontSize = 12.sp)
                         }
                     }
                 }
@@ -89,8 +97,19 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(task.done, { scope.launch { Repo.complete(task.id, !task.done); onTasksUpdated(Repo.tasks()) } })
                             Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                                Text(task.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Text(task.description, fontSize = 13.sp, color = Color.Gray)
+                                Text(
+                                    text = task.title,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    style = if (task.done) TextStyle(textDecoration = TextDecoration.LineThrough) else TextStyle.Default,
+                                    color = if (task.done) Color.Gray else Color.Unspecified
+                                )
+                                Text(
+                                    text = task.description,
+                                    fontSize = 13.sp,
+                                    color = Color.Gray,
+                                    style = if (task.done) TextStyle(textDecoration = TextDecoration.LineThrough) else TextStyle.Default
+                                )
                                 if (task.dueDate != null) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Event, null, modifier = Modifier.size(12.dp), tint = Color.Gray)
@@ -309,6 +328,11 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                             googleLogin(scope) { result ->
                                 val email = result
                                 if (email != null) {
+                                    if (email.startsWith("ERROR:")) {
+                                        err = email.removePrefix("ERROR:")
+                                        load = false
+                                        return@googleLogin
+                                    }
                                     println("UI: Google login successful for $email")
                                     scope.launch {
                                         val res = Repo.login(email, "google_auto_login", isGoogle = true)

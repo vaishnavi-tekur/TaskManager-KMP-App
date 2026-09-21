@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.credentials.*
+import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.*
 import kotlinx.coroutines.launch
 
@@ -42,6 +43,9 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
         return onResult(null)
     }
 
+    val signInOption = GetSignInWithGoogleOption.Builder(googleClientId)
+        .build()
+
     val googleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(false)
         .setAutoSelectEnabled(false)
@@ -49,6 +53,7 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
         .build()
 
     val request = GetCredentialRequest.Builder()
+        .addCredentialOption(signInOption)
         .addCredentialOption(googleIdOption)
         .build()
 
@@ -62,20 +67,43 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(cred.data)
                 onResult(googleIdTokenCredential.id)
             } else {
-                onResult(null)
+                onResult("ERROR:Unexpected credential type: ${cred::class.simpleName}")
             }
         } catch (e: Exception) {
             println("GOOGLE LOGIN FAILED: ${e.message}")
-            // Check if we are likely on an emulator or have no accounts
-            if (e is androidx.credentials.exceptions.GetCredentialException || 
+            
+            // If the primary branded account reauth fails, try explicitly with the standard picker option solo
+            if (e.message?.contains("reauth") == true || e.message?.contains("16") == true) {
+                try {
+                    val fallbackRequest = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+                    val result = credentialManager.getCredential(context, fallbackRequest)
+                    val cred = result.credential
+                    if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(cred.data)
+                        return@launch onResult(googleIdTokenCredential.id)
+                    }
+                } catch (fallbackEx: Exception) {
+                    return@launch onResult("ERROR:${fallbackEx.message ?: fallbackEx::class.simpleName}")
+                }
+            }
+
+            val isEmulator = Build.FINGERPRINT.startsWith("generic") ||
+                    Build.FINGERPRINT.startsWith("unknown") ||
+                    Build.MODEL.contains("google_sdk") ||
+                    Build.MODEL.contains("Emulator") ||
+                    Build.MODEL.contains("Android SDK built for x86")
+
+            if (isEmulator && (e is GetCredentialException ||
                 e.message?.contains("No credentials available") == true ||
-                e.message?.contains("cancelled") == true) {
+                e.message?.contains("cancelled") == true)) {
                 
-                println("GOOGLE LOGIN: Emulator detected or error occurred. Falling back to mock account for testing.")
+                println("GOOGLE LOGIN: Emulator detected. Falling back to mock account for testing.")
                 onResult("test@bhrish.com")
             } else {
                 e.printStackTrace()
-                onResult(null)
+                onResult("ERROR:${e.message ?: e::class.simpleName}")
             }
         }
     }
