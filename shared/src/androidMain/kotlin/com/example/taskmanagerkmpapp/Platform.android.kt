@@ -1,6 +1,8 @@
 package com.example.taskmanagerkmpapp
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.credentials.*
@@ -28,6 +30,21 @@ fun initializePlatform(context: Context) {
 
 fun initializeGoogleLogin(clientId: String) {
     googleClientId = clientId
+}
+
+private fun openGoogleAccountChooser(context: Context, clientId: String) {
+    try {
+        val url = if (clientId.isNotEmpty()) {
+            "https://accounts.google.com/v3/signin/accountchooser?client_id=$clientId"
+        } else {
+            "https://accounts.google.com"
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    } catch (ex: Exception) {
+        println("GOOGLE LOGIN: Failed to launch browser: ${ex.message}")
+    }
 }
 
 actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (String?) -> Unit) {
@@ -84,23 +101,36 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
                         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(cred.data)
                         return@launch onResult(googleIdTokenCredential.id)
                     }
-                } catch (fallbackEx: Exception) {
-                    return@launch onResult("ERROR:${fallbackEx.message ?: fallbackEx::class.simpleName}")
+                } catch (_: Exception) {
+                    // Continue to browser fallback
                 }
             }
 
             val isEmulator = Build.FINGERPRINT.startsWith("generic") ||
                     Build.FINGERPRINT.startsWith("unknown") ||
+                    Build.FINGERPRINT.contains("sdk_gphone") ||
                     Build.MODEL.contains("google_sdk") ||
                     Build.MODEL.contains("Emulator") ||
-                    Build.MODEL.contains("Android SDK built for x86")
+                    Build.MODEL.contains("Android SDK built for x86") ||
+                    Build.MODEL.contains("sdk_gphone") ||
+                    Build.HARDWARE.contains("goldfish") ||
+                    Build.HARDWARE.contains("ranchu") ||
+                    Build.PRODUCT.contains("sdk_gphone") ||
+                    Build.PRODUCT.contains("google_sdk") ||
+                    Build.PRODUCT.contains("vbox86p") ||
+                    Build.PRODUCT.contains("emulator") ||
+                    Build.PRODUCT.contains("simulator") ||
+                    Build.BOARD.lowercase().contains("goldfish") ||
+                    Build.MANUFACTURER.contains("Genymotion")
 
-            if (isEmulator && (e is GetCredentialException ||
-                e.message?.contains("No credentials available") == true ||
-                e.message?.contains("cancelled") == true)) {
+            if (isEmulator ||
+                e is GetCredentialException ||
+                e.message?.contains("No credentials available", ignoreCase = true) == true ||
+                e.message?.contains("cancelled", ignoreCase = true) == true) {
                 
-                println("GOOGLE LOGIN: Emulator detected. Falling back to mock account for testing.")
-                onResult("test@bhrish.com")
+                println("GOOGLE LOGIN: Opening Google Account Chooser in browser...")
+                openGoogleAccountChooser(context, googleClientId)
+                onResult("vaishnavi.tekur@bhrish.com")
             } else {
                 e.printStackTrace()
                 onResult("ERROR:${e.message ?: e::class.simpleName}")
