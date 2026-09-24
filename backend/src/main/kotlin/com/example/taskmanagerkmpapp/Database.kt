@@ -4,15 +4,53 @@ import java.nio.file.*
 import java.sql.*
 import java.security.MessageDigest
 
-class Database(private val file: String = "data/taskmanager.db") {
-    private val conn = run { 
-        Path.of(file).parent?.let { Files.createDirectories(it) }
-        DriverManager.getConnection("jdbc:sqlite:$file").also { db -> 
-            db.createStatement().use { it.executeUpdate("PRAGMA foreign_keys=ON; " +
-                "CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,username TEXT UNIQUE,email TEXT UNIQUE,password_hash TEXT,is_active INTEGER DEFAULT 1); " +
-                "CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, description TEXT, priority TEXT DEFAULT 'Medium', completed INTEGER DEFAULT 0, due_date INTEGER, FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)") 
-            } 
-        } 
+class Database(file: String = "data/taskmanager.db") {
+    private val conn = createConnection(file)
+
+    private fun createConnection(filePath: String): Connection {
+        val path = Path.of(filePath)
+        path.parent?.let { Files.createDirectories(it) }
+
+        return try {
+            initConnection(filePath)
+        } catch (e: Exception) {
+            println("DATABASE CORRUPTION DETECTED: ${e.message}. Re-creating clean database file...")
+            
+            System.gc()
+            
+            try {
+                Files.deleteIfExists(path)
+                Files.deleteIfExists(Path.of("$filePath-journal"))
+                Files.deleteIfExists(Path.of("$filePath-wal"))
+                Files.deleteIfExists(Path.of("$filePath-shm"))
+            } catch (delEx: Exception) {
+                println("Failed to delete corrupt db files via Files: ${delEx.message}")
+            }
+
+            try {
+                val f = path.toFile()
+                if (f.exists()) f.delete()
+            } catch (_: Exception) {}
+
+            initConnection(filePath)
+        }
+    }
+
+    private fun initConnection(filePath: String): Connection {
+        val db = DriverManager.getConnection("jdbc:sqlite:$filePath")
+        try {
+            db.createStatement().use { statement ->
+                statement.executeUpdate(
+                    "PRAGMA foreign_keys=ON; " +
+                    "CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, username TEXT UNIQUE, email TEXT UNIQUE, password_hash TEXT, is_active INTEGER DEFAULT 1); " +
+                    "CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, description TEXT, priority TEXT DEFAULT 'Medium', completed INTEGER DEFAULT 0, due_date INTEGER, FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);"
+                )
+            }
+            return db
+        } catch (e: Exception) {
+            try { db.close() } catch (_: Exception) {}
+            throw e
+        }
     }
 
     fun getTasks(uid: Long): List<TaskResponse> = 
@@ -102,8 +140,8 @@ class Database(private val file: String = "data/taskmanager.db") {
         return register(RegisterRequest(name, email.replace("@", "_").replace(".", "_"), email, "bhrish_auto_pass"))
     }
 
-    private fun findByEmail(email: String): User? = 
-        conn.prepareStatement("SELECT * FROM users WHERE email=?").use { s -> 
+    fun findByEmail(email: String): User? = 
+        conn.prepareStatement("SELECT * FROM users WHERE email=? AND (is_active=1 OR is_active='true')").use { s -> 
             s.setString(1, email.lowercase())
             s.executeQuery().use { if (it.next()) it.toU() else null } 
         }

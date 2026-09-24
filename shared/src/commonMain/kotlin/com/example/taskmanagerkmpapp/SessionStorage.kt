@@ -5,6 +5,9 @@ interface SessionStorage {
     fun saveTasks(json: String)
     fun read(key: String): String
     fun clear()
+    fun getSavedEmails(): List<String>
+    fun addSavedEmail(email: String)
+    fun removeSavedEmail(email: String)
 }
 
 expect fun sessionStorage(): SessionStorage

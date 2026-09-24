@@ -1,8 +1,10 @@
 package com.example.taskmanagerkmpapp
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -25,7 +27,10 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.datetime.Clock
+
+
 import taskmanagerkmpapp.shared.generated.resources.ic_google
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -60,6 +65,9 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
     val month = monthInt.toString().padStart(2, '0')
     val dateString = "$day.$month.${now.year}"
 
+    val rawName = user?.name?.takeIf { it.isNotBlank() } ?: "User"
+    val firstName = rawName.split(".", " ", "_", "-").firstOrNull { it.isNotBlank() }?.replaceFirstChar { it.uppercase() } ?: "User"
+
     LaunchedEffect(Unit) { onTasksUpdated(Repo.tasks()) }
 
     fun logout() = onNavigate("login")
@@ -72,21 +80,58 @@ internal fun TaskListScreen(user: User?, items: List<Task>, blue: Color, scope: 
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Column(Modifier.fillMaxWidth().background(blue).padding(24.dp)) {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.fillMaxWidth().background(blue).padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         IconButton({ logout() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
+                        Spacer(Modifier.width(4.dp))
                         Column {
-                            Text("${(user?.name ?: "User").uppercase()}'s Tasks", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "${firstName.uppercase()}'s Tasks",
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(dateString, color = Color.White.copy(0.7f), fontSize = 14.sp)
+                                Text(dateString, color = Color.White.copy(0.7f), fontSize = 13.sp)
                             }
                         }
                     }
-                    Card(colors = CardDefaults.cardColors(Color.White), shape = RoundedCornerShape(8.dp), modifier = Modifier.width(80.dp).height(75.dp)) {
-                        Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
-                            Text("${items.size}", color = blue, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                            Text("Tasks", color = Color.Gray, fontSize = 12.sp)
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        modifier = Modifier.width(75.dp).height(65.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "${items.size}",
+                                color = blue,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Tasks",
+                                color = Color.Gray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }
@@ -234,6 +279,31 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
     var vis2 by remember { mutableStateOf(false)}
     var err by remember { mutableStateOf("") }; var load by remember { mutableStateOf(false) }
 
+    var showAccountPicker by remember { mutableStateOf(false) }
+    var showCustomEmailInput by remember { mutableStateOf(false) }
+    var customEmailText by remember { mutableStateOf("") }
+
+    LaunchedEffect(screen) {
+        err = ""
+    }
+
+    fun performGoogleLogin(selectedEmail: String) {
+        err = ""
+        load = true
+        scope.launch {
+            val res = Repo.login(selectedEmail, "google_auto_login", isGoogle = true)
+            if (res is AuthResponse.Success) {
+                storage.addSavedEmail(selectedEmail)
+                storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
+                Repo.token = res.auth.token
+                onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
+            } else {
+                err = (res as AuthResponse.Error).message
+            }
+            load = false
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(Color(0xFFF5F5F5)), Alignment.Center) {
         Card(Modifier.fillMaxWidth().padding(24.dp), RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(Color.White)) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -243,29 +313,29 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 Spacer(Modifier.height(16.dp))
                 if (screen != "login") {
                     Text("Full Name", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    OutlinedTextField(n, { n = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your name") })
+                    OutlinedTextField(n, { n = it; err = "" }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your name") })
                     Spacer(Modifier.height(8.dp))
                 }
 
                 Text("Username", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                OutlinedTextField(u, { u = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your username") })
+                OutlinedTextField(u, { u = it; err = "" }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your username") })
 
                 if (screen != "login") {
                     Spacer(Modifier.height(8.dp))
                     Text("Email", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    OutlinedTextField(e, { e = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your email") })
+                    OutlinedTextField(e, { e = it; err = "" }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your email") })
                 }
 
                 Spacer(Modifier.height(8.dp))
                 Text("Password", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                OutlinedTextField(p, { p = it }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your password") }, visualTransformation = if (vis) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton({ vis = !vis }) { Icon(if (vis) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) } })
+                OutlinedTextField(p, { p = it; err = "" }, Modifier.fillMaxWidth(), placeholder = { Text("Enter your password") }, visualTransformation = if (vis) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton({ vis = !vis }) { Icon(if (vis) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) } })
 
                 if (screen != "login") {
                     Spacer(Modifier.height(8.dp))
                     Text("Confirm Password", Modifier.align(Alignment.Start), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     OutlinedTextField(
                         value = cp,
-                        onValueChange = { cp = it },
+                        onValueChange = { cp = it; err = "" },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Confirm your password") },
                         visualTransformation = if (vis2) VisualTransformation.None else PasswordVisualTransformation(),
@@ -290,6 +360,7 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
+                        err = ""
                         if (u.isBlank()) { err = "Enter username and password"; return@Button }
                         if (screen != "login" && e.isBlank()) { err = "Enter email"; return@Button }
                         if (p.isBlank()) { err = "Enter password"; return@Button }
@@ -326,28 +397,11 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                             err = ""
                             load = true
                             googleLogin(scope) { result ->
-                                val email = result
-                                if (email != null) {
-                                    if (email.startsWith("ERROR:")) {
-                                        err = email.removePrefix("ERROR:")
-                                        load = false
-                                        return@googleLogin
-                                    }
-                                    println("UI: Google login successful for $email")
-                                    scope.launch {
-                                        val res = Repo.login(email, "google_auto_login", isGoogle = true)
-                                        if (res is AuthResponse.Success) {
-                                            storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
-                                            Repo.token = res.auth.token
-                                            onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
-                                        } else {
-                                            err = (res as AuthResponse.Error).message
-                                        }
-                                        load = false
-                                    }
+                                if (result != null && result != "SHOW_PICKER" && !result.startsWith("ERROR:")) {
+                                    performGoogleLogin(result)
                                 } else {
-                                    err = "Google Sign-In failed or was cancelled."
                                     load = false
+                                    showAccountPicker = true
                                 }
                             }
                         },
@@ -368,6 +422,179 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                     Text(if (screen == "login") "Don't have an account? Register now" else "Already have an account? Login", color = Color.Gray, fontSize = 12.sp)
                 }
             }
+        }
+
+        if (showAccountPicker) {
+            var savedEmailsList by remember { mutableStateOf(storage.getSavedEmails()) }
+
+            AlertDialog(
+                onDismissRequest = {
+                    showAccountPicker = false
+                    showCustomEmailInput = false
+                    load = false
+                },
+                title = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_google),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = Color.Unspecified
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text("Choose an account", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("to continue to Task Manager", fontSize = 13.sp, color = Color.Gray)
+                    }
+                },
+                text = {
+                    Column(
+                        Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (!showCustomEmailInput) {
+                            if (savedEmailsList.isEmpty()) {
+                                Text(
+                                    "No saved accounts found. Please add an account below.",
+                                    fontSize = 13.sp,
+                                    color = Color.Gray,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                                )
+                            } else {
+                                savedEmailsList.forEach { emailItem ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.weight(1f).clickable {
+                                                    showAccountPicker = false
+                                                    performGoogleLogin(emailItem)
+                                                }.padding(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = Color(0xFFE8F0FE),
+                                                    modifier = Modifier.size(36.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Text(
+                                                            text = emailItem.take(1).uppercase(),
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = blue,
+                                                            fontSize = 16.sp
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(Modifier.width(10.dp))
+                                                Column {
+                                                    Text(
+                                                        text = emailItem.substringBefore("@").replace(".", " "),
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 13.sp,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        text = emailItem,
+                                                        fontSize = 11.sp,
+                                                        color = Color.Gray,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+
+                                            IconButton(
+                                                onClick = {
+                                                    storage.removeSavedEmail(emailItem)
+                                                    savedEmailsList = storage.getSavedEmails()
+                                                },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = "Remove account",
+                                                    tint = Color.Gray,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+                            Card(
+                                onClick = { showCustomEmailInput = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.PersonAdd,
+                                        contentDescription = null,
+                                        tint = blue,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(Modifier.width(16.dp))
+                                    Text("Use another account", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = blue)
+                                }
+                            }
+                        } else {
+                            OutlinedTextField(
+                                value = customEmailText,
+                                onValueChange = { customEmailText = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Google Email") },
+                                placeholder = { Text("Enter your email address") },
+                                singleLine = true
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    if (showCustomEmailInput) {
+                        TextButton(onClick = {
+                            if (customEmailText.isNotBlank()) {
+                                val emailToUse = customEmailText.trim()
+                                showAccountPicker = false
+                                showCustomEmailInput = false
+                                performGoogleLogin(emailToUse)
+                            }
+                        }) {
+                            Text("Continue", fontWeight = FontWeight.Bold, color = blue)
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        if (showCustomEmailInput) {
+                            showCustomEmailInput = false
+                        } else {
+                            showAccountPicker = false
+                            load = false
+                        }
+                    }) {
+                        Text(if (showCustomEmailInput) "Back" else "Cancel", color = Color.Gray)
+                    }
+                }
+            )
         }
     }
 }
