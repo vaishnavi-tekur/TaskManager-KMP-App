@@ -9,17 +9,22 @@ import androidx.compose.ui.tooling.preview.Preview
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
-        super.onCreate(savedInstanceState)
-        initializeSessionStorage(this)
-        initializePlatform(this)
+        try {
+            enableEdgeToEdge()
+            super.onCreate(savedInstanceState)
+            initializeSessionStorage(this)
+            initializePlatform(this)
 
-        // Use the values from .env (via BuildConfig)
-        initializeGoogleLogin(BuildConfig.GOOGLE_CLIENT_ID)
-        initializeBackendUrl(BuildConfig.BACKEND_URL)
+            // Use the values from .env (via BuildConfig)
+            initializeGoogleLogin(BuildConfig.GOOGLE_CLIENT_ID)
+            initializeBackendUrl(BuildConfig.BACKEND_URL)
 
-        setContent {
-            App()
+            setContent {
+                App()
+            }
+        } catch (e: Exception) {
+            println("MAIN ACTIVITY ERROR: ${e.message}")
+            e.printStackTrace()
         }
     }
 }

@@ -42,34 +42,36 @@ actual fun googleLogin(scope: kotlinx.coroutines.CoroutineScope, onResult: (Stri
         return onResult("SHOW_PICKER")
     }
 
-    val signInOption = GetSignInWithGoogleOption.Builder(googleClientId)
-        .build()
-
     val googleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(false)
         .setAutoSelectEnabled(false)
         .setServerClientId(googleClientId)
         .build()
 
+    val signInOption = GetSignInWithGoogleOption.Builder(googleClientId)
+        .build()
+
     val request = GetCredentialRequest.Builder()
-        .addCredentialOption(signInOption)
         .addCredentialOption(googleIdOption)
+        .addCredentialOption(signInOption)
         .build()
 
     scope.launch {
         try {
-            println("GOOGLE LOGIN: Starting request...")
+            println("GOOGLE LOGIN: Starting native CredentialManager request...")
             val result = credentialManager.getCredential(context, request)
             val cred = result.credential
             
             if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(cred.data)
-                onResult(googleIdTokenCredential.id)
+                val verifiedEmail = googleIdTokenCredential.id
+                println("GOOGLE LOGIN SUCCESS: Verified email from Google = $verifiedEmail")
+                onResult(verifiedEmail)
             } else {
                 onResult("SHOW_PICKER")
             }
         } catch (e: Exception) {
-            println("GOOGLE LOGIN FAILED: ${e.message}")
+            println("GOOGLE LOGIN FAILED (${e.message}). Opening Account Chooser dialog...")
             onResult("SHOW_PICKER")
         }
     }

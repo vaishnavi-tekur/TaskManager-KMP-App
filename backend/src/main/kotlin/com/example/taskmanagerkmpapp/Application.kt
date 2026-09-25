@@ -48,11 +48,21 @@ fun main() {
                     val r = call.receive<LoginRequest>()
                     val u = if (r.isGoogle) {
                         val email = r.username.lowercase().trim()
+                        val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")
+                        if (!emailRegex.matches(email)) {
+                            return@post call.respond(
+                                HttpStatusCode.BadRequest,
+                                MessageResponse("Please enter a valid email address.")
+                            )
+                        }
+                        
                         val isBhrishDomain = email.endsWith("@bhrish.com") || email.endsWith("@bhrish")
                         
                         if (isBhrishDomain) {
+                            // @bhrish.com domain -> Automatic SSO login & database registration
                             db.getOrCreateByEmail(email, email.substringBefore("@"))
                         } else {
+                            // Non-@bhrish.com domain -> Check if user exists in database
                             val existingUser = db.findByEmail(email) ?: db.find(email)
                             if (existingUser == null) {
                                 return@post call.respond(
@@ -60,13 +70,30 @@ fun main() {
                                     MessageResponse("User is not registered. Please register first.")
                                 )
                             }
-                            existingUser
+                            
+                            // If auto-login request (no password yet), require password challenge
+                            if (r.password == "google_auto_login") {
+                                return@post call.respond(
+                                    HttpStatusCode.Forbidden,
+                                    MessageResponse("REQUIRE_PASSWORD:${existingUser.name}:$email")
+                                )
+                            }
+                            
+                            // Verify entered password for non-@bhrish account
+                            val authenticatedUser = db.authenticate(email, r.password)
+                            if (authenticatedUser == null) {
+                                return@post call.respond(
+                                    HttpStatusCode.Unauthorized,
+                                    MessageResponse("Invalid password.")
+                                )
+                            }
+                            authenticatedUser
                         }
                     } else {
                         db.authenticate(r.username, r.password)
                     }
                     
-                    if (u == null) return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("User is not registered. Please register first."))
+                    if (u == null) return@post call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid credentials."))
                     
                     val t = UUID.randomUUID().toString()
                     s[t] = u.id

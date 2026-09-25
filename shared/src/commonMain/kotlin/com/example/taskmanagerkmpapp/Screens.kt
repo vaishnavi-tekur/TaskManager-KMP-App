@@ -272,6 +272,13 @@ internal fun AddTaskScreen(blue: Color, scope: CoroutineScope, onNavigate: (Stri
     }
 }
 
+private val EMAIL_REGEX = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")
+
+private fun isValidEmail(email: String): Boolean {
+    val trimmed = email.trim()
+    return trimmed.isNotEmpty() && EMAIL_REGEX.matches(trimmed)
+}
+
 @Composable
 internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, storage: SessionStorage, onNavigate: (String) -> Unit, onLoginSuccess: (User, List<Task>) -> Unit) {
     var u by remember { mutableStateOf("") }; var p by remember { mutableStateOf("") }; var n by remember { mutableStateOf("") }
@@ -282,6 +289,13 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
     var showAccountPicker by remember { mutableStateOf(false) }
     var showCustomEmailInput by remember { mutableStateOf(false) }
     var customEmailText by remember { mutableStateOf("") }
+    var pickerError by remember { mutableStateOf("") }
+
+    var showPasswordChallengeDialog by remember { mutableStateOf(false) }
+    var challengeUserName by remember { mutableStateOf("") }
+    var challengeUserEmail by remember { mutableStateOf("") }
+    var challengePassword by remember { mutableStateOf("") }
+    var challengeError by remember { mutableStateOf("") }
 
     LaunchedEffect(screen) {
         err = ""
@@ -298,7 +312,19 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                 Repo.token = res.auth.token
                 onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
             } else {
-                err = (res as AuthResponse.Error).message
+                val errMsg = (res as AuthResponse.Error).message
+                if (errMsg.startsWith("REQUIRE_PASSWORD:")) {
+                    val parts = errMsg.removePrefix("REQUIRE_PASSWORD:").split(":")
+                    val namePart = parts.getOrNull(0) ?: ""
+                    val emailPart = parts.getOrNull(1) ?: selectedEmail
+                    challengeUserName = namePart
+                    challengeUserEmail = emailPart
+                    challengePassword = ""
+                    challengeError = ""
+                    showPasswordChallengeDialog = true
+                } else {
+                    err = errMsg
+                }
             }
             load = false
         }
@@ -397,8 +423,20 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                             err = ""
                             load = true
                             googleLogin(scope) { result ->
-                                if (result != null && result != "SHOW_PICKER" && !result.startsWith("ERROR:")) {
-                                    performGoogleLogin(result)
+                                val email = result
+                                if (email != null) {
+                                    if (email == "SHOW_PICKER") {
+                                        load = false
+                                        showAccountPicker = true
+                                        return@googleLogin
+                                    }
+                                    if (email.startsWith("ERROR:")) {
+                                        err = email.removePrefix("ERROR:")
+                                        load = false
+                                        return@googleLogin
+                                    }
+                                    println("UI: Native Google login successful for $email")
+                                    performGoogleLogin(email)
                                 } else {
                                     load = false
                                     showAccountPicker = true
@@ -557,26 +595,40 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                                 }
                             }
                         } else {
-                            OutlinedTextField(
-                                value = customEmailText,
-                                onValueChange = { customEmailText = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Google Email") },
-                                placeholder = { Text("Enter your email address") },
-                                singleLine = true
-                            )
+                            Column {
+                                OutlinedTextField(
+                                    value = customEmailText,
+                                    onValueChange = { customEmailText = it; pickerError = "" },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text("Google Email") },
+                                    placeholder = { Text("e.g. user@gmail.com") },
+                                    singleLine = true,
+                                    isError = pickerError.isNotEmpty()
+                                )
+                                if (pickerError.isNotEmpty()) {
+                                    Text(
+                                        text = pickerError,
+                                        color = Color.Red,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 },
                 confirmButton = {
                     if (showCustomEmailInput) {
                         TextButton(onClick = {
-                            if (customEmailText.isNotBlank()) {
-                                val emailToUse = customEmailText.trim()
-                                showAccountPicker = false
-                                showCustomEmailInput = false
-                                performGoogleLogin(emailToUse)
+                            val emailToUse = customEmailText.trim().lowercase()
+                            if (!isValidEmail(emailToUse)) {
+                                pickerError = "Please enter a valid email address (e.g. user@gmail.com)."
+                                return@TextButton
                             }
+                            pickerError = ""
+                            showAccountPicker = false
+                            showCustomEmailInput = false
+                            performGoogleLogin(emailToUse)
                         }) {
                             Text("Continue", fontWeight = FontWeight.Bold, color = blue)
                         }
@@ -592,6 +644,122 @@ internal fun AuthScreen(screen: String, blue: Color, scope: CoroutineScope, stor
                         }
                     }) {
                         Text(if (showCustomEmailInput) "Back" else "Cancel", color = Color.Gray)
+                    }
+                }
+            )
+        }
+
+        if (showPasswordChallengeDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showPasswordChallengeDialog = false
+                    challengePassword = ""
+                    challengeError = ""
+                    load = false
+                },
+                title = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_google),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = Color.Unspecified
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Hi ${challengeUserName.ifBlank { challengeUserEmail.substringBefore("@") }}",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFFF1F3F4),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = challengeUserEmail,
+                                fontSize = 12.sp,
+                                color = Color.DarkGray,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        var vis by remember { mutableStateOf(false) }
+                        OutlinedTextField(
+                            value = challengePassword,
+                            onValueChange = { challengePassword = it; challengeError = "" },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Enter your password") },
+                            placeholder = { Text("Enter password") },
+                            singleLine = true,
+                            visualTransformation = if (vis) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { vis = !vis }) {
+                                    Icon(
+                                        if (vis) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = null
+                                    )
+                                }
+                            },
+                            isError = challengeError.isNotEmpty()
+                        )
+                        if (challengeError.isNotEmpty()) {
+                            Text(
+                                text = challengeError,
+                                color = Color.Red,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (challengePassword.isBlank()) {
+                                challengeError = "Enter your password"
+                                return@Button
+                            }
+                            challengeError = ""
+                            load = true
+                            scope.launch {
+                                val res = Repo.login(challengeUserEmail, challengePassword, isGoogle = true)
+                                if (res is AuthResponse.Success) {
+                                    showPasswordChallengeDialog = false
+                                    storage.addSavedEmail(challengeUserEmail)
+                                    storage.save(res.auth.user.username, res.auth.user.name, res.auth.user.email, res.auth.token)
+                                    Repo.token = res.auth.token
+                                    onLoginSuccess(User(res.auth.user.name, res.auth.user.username, res.auth.user.email), Repo.tasks())
+                                } else {
+                                    challengeError = (res as AuthResponse.Error).message
+                                }
+                                load = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(blue),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text("Next", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showPasswordChallengeDialog = false
+                        challengePassword = ""
+                        challengeError = ""
+                        load = false
+                    }) {
+                        Text("Cancel", color = Color.Gray)
                     }
                 }
             )
